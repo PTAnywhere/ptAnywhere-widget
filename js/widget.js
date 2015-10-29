@@ -158,10 +158,8 @@ var ptAnywhere = (function () {
 
     // Module for creating device network map
     var networkMap = (function () {
-
-        //var nodes = null; // To replace in the future with null
-        //var edges = null; // To replace in the future with null
-        var nodes, edges;
+        var nodes = new vis.DataSet();
+        var edges = new vis.DataSet();
         var network;
         var containerSelector = null;
 
@@ -172,32 +170,25 @@ var ptAnywhere = (function () {
 
         // Created the DOM that shorty afterwards will be replaced by the network map
         function createTemporaryDOM() {
-            containerSelector.append('<img class="' + html.cLoadingIcon + '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
-                                  '<div style="text-align: center;">' +
-                                  '<p>' + res.network.loading + '<p>' +
-                                  '<p id="' + html.idLoadingMessage + '"></p>' +
-                                  '</div>');
+            var ret = $('<div class="network"></div>');
+            ret.append('<img class="' + html.cLoadingIcon + '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
+                        '<div style="text-align: center;">' +
+                        '<p>' + res.network.loading + '<p>' +
+                        '<p id="' + html.idLoadingMessage + '"></p>' +
+                        '</div>');
+            return ret;
         }
 
-        function drawTopology(responseData) {
-            // Initialize data sets if needed
-            if (nodes==null) {
-                nodes = new vis.DataSet();
+        function getSelectedNode() {
+            var selected = network.getSelection();
+            if (selected.nodes.length!=1) { // Only if just one is selected
+                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
+                return null;
             }
-            if (edges==null) {
-                edges = new vis.DataSet();
-            }
+            return nodes.get(selected.nodes[0]);
+        }
 
-            // Load data
-            if (responseData.devices!=null) {
-                nodes.clear();
-                nodes.add(responseData.devices);
-            }
-            if (responseData.edges!=null) {
-                edges.clear();
-                edges.add(responseData.edges);
-            }
-
+        function drawTopology(isInteractive) {
             // Create network element if needed (only the first time)
             if (network==null) {
                 // create a network
@@ -241,41 +232,51 @@ var ptAnywhere = (function () {
                     manipulation: {
                         initiallyActive: true,
                         addNode: function(data, callback) {
-                                    deviceCreationDialog.open(data.x, data.y, addNode);
+                                    if (isInteractive) {
+                                        deviceCreationDialog.open(data.x, data.y, addNode);
+                                    }
                                  },
                         addEdge: function(data, callback) {
-                                    var fromDevice = nodes.get(data.from);
-                                    var toDevice = nodes.get(data.to);
-                                    var sCallback = function(edgeId, edgeUrl) {
-                                                        edges.add([{
-                                                            id: edgeId,
-                                                            url: edgeUrl,
-                                                            from: fromDevice.id,
-                                                            to: toDevice.id,
-                                                        }]);
-                                                    };
-                                    linkDialog.open(fromDevice, toDevice, sCallback);
+                                    if (isInteractive) {
+                                        var fromDevice = nodes.get(data.from);
+                                        var toDevice = nodes.get(data.to);
+                                        var sCallback = function(edgeId, edgeUrl) {
+                                                            edges.add([{
+                                                                id: edgeId,
+                                                                url: edgeUrl,
+                                                                from: fromDevice.id,
+                                                                to: toDevice.id,
+                                                            }]);
+                                                        };
+                                        linkDialog.open(fromDevice, toDevice, sCallback);
+                                    }
                                  },
                         editNode: function(data, callback) {
-                                    var successUpdatingNode = function(result) { nodes.update(result); };
-                                    deviceModificationDialog.open(nodes.get(data.id), successUpdatingNode);
-                                    callback(data);
+                                      if (isInteractive) {
+                                          var successUpdatingNode = function(result) { nodes.update(result); };
+                                          deviceModificationDialog.open(nodes.get(data.id), successUpdatingNode);
+                                          callback(data);
+                                      }
                                   },
                         editEdge: false,
                         deleteNode: function(data, callback) {
-                                        // Always (data.nodes.length>0) && (data.edges.length==0)
-                                        // FIXME There might be more than a node selected...
-                                        ptClient.removeDevice(nodes.get(data.nodes[0]));
-                                        // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                        callback(data);
+                                        if (isInteractive) {
+                                            // Always (data.nodes.length>0) && (data.edges.length==0)
+                                            // FIXME There might be more than a node selected...
+                                            ptClient.removeDevice(nodes.get(data.nodes[0]));
+                                            // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                            callback(data);
+                                          }
                                     },
                         deleteEdge: function(data, callback) {
-                                        // Always (data.nodes.length==0) && (data.edges.length>0)
-                                        // FIXME There might be more than an edge selected...
-                                        var edgeId = data.edges[0]; // Var created just to enhance readability
-                                        ptClient.removeLink( edges.get(edgeId).url );
-                                        // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                        callback(data);
+                                        if (isInteractive) {
+                                            // Always (data.nodes.length==0) && (data.edges.length>0)
+                                            // FIXME There might be more than an edge selected...
+                                            var edgeId = data.edges[0]; // Var created just to enhance readability
+                                            ptClient.removeLink( edges.get(edgeId).url );
+                                            // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                            callback(data);
+                                        }
                                     },
                     },
                     locale: 'ptAnywhere',
@@ -284,12 +285,33 @@ var ptAnywhere = (function () {
                     },
                 };
                 network = new vis.Network(containerSelector.get(0), visData, options);
-                network.on('doubleClick', function() {
-                    var selected = getSelectedNode();
-                    if (selected!=null)
-                        commandLine.open(selected);
-                });
+                if (isInteractive) {
+                    network.on('doubleClick', function() {
+                        var selected = getSelectedNode();
+                        if (selected!=null)
+                            commandLine.open(selected);
+                    });
+                }
             }
+        }
+
+        function createMap(containerSelctor, isInteractive) {
+            containerSelector = createTemporaryDOM();
+            drawTopology(isInteractive);
+            return containerSelector;
+        }
+
+        function update(responseData) {
+            // Load data
+            if (responseData.devices!=null) {
+                nodes.clear();
+                nodes.add(responseData.devices);
+            }
+            if (responseData.edges!=null) {
+                edges.clear();
+                edges.add(responseData.edges);
+            }
+            network.fit();
         }
 
         function addNode(newNode) {
@@ -307,37 +329,20 @@ var ptAnywhere = (function () {
         }
 
         /**
-         * @arg callback If it is null, it is simply ignored.
+         * Shows an error where the network topology should have been loaded.
          */
-        function loadTopology(containerId, callback) {
-            containerSelector = $('#' + containerId);
-            createTemporaryDOM();
-
-            var draw = drawTopology;
-            ptClient.getNetwork(function(data) {
-                draw(data);
-                if (callback!=null)
-                    callback();
-            }, function(tryCount, maxRetries, errorMessage) {
-                $('#' + html.idLoadingMessage).text(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
-            });
-        }
-
-        function getSelectedNode() {
-            var selected = network.getSelection();
-            if (selected.nodes.length!=1) { // Only if just one is selected
-                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
-                return null;
-            }
-            return nodes.get(selected.nodes[0]);
+        function showError(errorMsg) {
+            $('#' + html.idLoadingMessage, containerSelector).text(errorMsg);
         }
 
         // Reveal public pointers to
         // private functions and properties
        return {
-            load: loadTopology,
+            create: createMap,
+            update: update,
             addNode: addNode,
             getCoordinate: toNetworkMapCoordinate,
+            error: showError,
        };
 
     })();
@@ -752,14 +757,54 @@ var ptAnywhere = (function () {
     })();
     // End deviceModificationDialog module
 
-    function showMessage(msg) {
-        widgetSelector.html('<div class="message">' + '<h1>' + msg.title + '</h1>' + msg.content + '</div>');
-    }
+    // Module for device drag-and-drop creation menu
+    var dragAndDropDeviceMenu = (function () {
+        var menuSelector;
+        var draggableElements = [
+            { element: 'cloud', icon: 'cloud.png', caption: 'Cloud'},
+            { element: 'router', icon: 'router.png', caption: 'Router'},
+            { element: 'switch', icon: 'switch.png', caption: 'Switch'},
+            { element: 'pc', icon: 'PC.png', caption: 'Pc'},
+        ];
 
-    function loadComponents(sessionURL, settings) {
-        ptClient = new packetTracer.Client(sessionURL, function() { showMessage(res.network.notLoaded); } );
+        function getFigureDOM(draggableElement) {
+            return '<figure><img class="' + draggableElement.element + '" alt="' +
+                   draggableElement.element + '" ' + 'src="' + staticsPath +
+                   draggableElement.icon + '"><figcaption>' +
+                   draggableElement.caption + '</figcaption></figure>';
+        }
 
-        networkMap.load('network');  // Always loaded
+        function createDOM() {
+            var fieldset = $('<fieldset class="creation-menu"></fieldset>');
+            fieldset.append('<legend>' + res.creationMenu.legend + '</legend>');
+            var figuresHolder = $('<div></div>');
+            for (var i in draggableElements) {
+                figuresHolder.append(getFigureDOM(draggableElements[i]));
+            }
+            fieldset.append(figuresHolder);
+            return fieldset;
+        }
+
+        function createMenu(parentSelector, dragToCanvas) {
+            menuSelector = createDOM();
+            for (var i in draggableElements) {
+                var el = draggableElements[i];
+                new ptAnywhere.DraggableDevice($('.' + el.element, menuSelector), dragToCanvas, el.element);
+            }
+            return menuSelector;
+        }
+
+        return {
+            create: createMenu
+        };
+    })();
+    // End deviceModificationDialog module
+
+    function loadComponents(settings, isInteractive) {
+        var netSelector = networkMap.create(netSelector, isInteractive);  // Always loaded
+        widgetSelector.append(netSelector);
+        var creationMenu = dragAndDropDeviceMenu.create(widgetSelector, netSelector);
+        widgetSelector.append(creationMenu);
 
         var hiddenComponentContents = $('<div></div>');
         hiddenComponentContents.hide();
@@ -780,17 +825,24 @@ var ptAnywhere = (function () {
       return url;
     }
 
-    // Widget configurator/initializer
-    function init(selector, apiURL, pathToStatics, customSettings) {
+    function init(selector, pathToStatics, customSettings) {
         widgetSelector = $(selector);
         staticsPath = addSlashIfNeeded(pathToStatics);
-
         var settings = { // Default values
             createSession: false,
             commandLine: true,
         };
         for (var attrName in customSettings) { settings[attrName] = customSettings[attrName]; }  // merge/override
+        return settings;
+    }
 
+    function showMessage(msg) {
+        widgetSelector.html('<div class="message"><h1>' + msg.title + '</h1>' + msg.content + '</div>');
+    }
+
+    // Widget configurator/initializer
+    function initInteractive(selector, apiURL, pathToStatics, customSettings) {
+        var settings = init(selector, pathToStatics, customSettings);
         if (settings.createSession) {
             showMessage(res.session.creating);
             packetTracer.newSession(apiURL, function(newSessionURL) {
@@ -801,13 +853,29 @@ var ptAnywhere = (function () {
                 showMessage(res.session.unavailable);
             });
         } else {
-            loadComponents(apiURL, settings);
+            loadComponents(settings, true);
+            ptClient = new packetTracer.Client(apiURL, function() {
+                showMessage(res.network.notLoaded);
+            });
+            ptClient.getNetwork(function(data) {
+                networkMap.update(data);
+            }, function(tryCount, maxRetries, errorMessage) {
+                networkMap.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
+            });
         }
+    }
+
+    // Widget configurator/initializer
+    function initNonInteractive(selector, pathToStatics, networkData, customSettings) {
+        var settings = init(selector, pathToStatics, customSettings);
+        loadComponents(settings, false);
+        networkMap.update(networkData);
     }
 
     // exposed functions and classes
     return {
-        createWidget: init,
+        createWidget: initInteractive,
+        createNonInteractiveWidget: initNonInteractive,
         DraggableDevice: DraggableDevice,
     };
 })();
