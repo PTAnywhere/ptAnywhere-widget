@@ -81,6 +81,7 @@ fieldset.creation-menu {
 
 fieldset.creation-menu legend {
   border: 0;
+  margin-top: 10px;  /* TODO check why not parent's padding does not affect it */
   font-size: 14px;
 }
 
@@ -128,7 +129,7 @@ fieldset.creation-menu figure figcaption {
 
 /* select with custom icons */
 
-select {
+.ui-selectmenu-menu select {
 	width: 200px;
 }
 .ui-selectmenu-menu .ui-menu.customicons .ui-menu-item {
