@@ -6,6 +6,7 @@ var ptAnywhere = (function () {
 
     var widgetSelector;
     var ptClient;  // JS client of the HTTP API
+    var staticsPath;
 
 
     // Begin: utility functions
@@ -165,14 +166,13 @@ var ptAnywhere = (function () {
         var containerSelector = null;
 
         var html = {  // Literals for classes, identifiers, names or paths
-            iconsPath: '../static/images/',
             cLoadingIcon: 'loading-icon',
             idLoadingMessage: 'loadingMessage',
         };
 
         // Created the DOM that shorty afterwards will be replaced by the network map
         function createTemporaryDOM() {
-            containerSelector.append('<img class="' + html.cLoadingIcon + '" src="' + html.iconsPath + 'loading.gif" alt="Loading network topology..." />' +
+            containerSelector.append('<img class="' + html.cLoadingIcon + '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
                                   '<div style="text-align: center;">' +
                                   '<p>' + res.network.loading + '<p>' +
                                   '<p id="' + html.idLoadingMessage + '"></p>' +
@@ -219,22 +219,22 @@ var ptAnywhere = (function () {
                     groups: {
                         cloudDevice : {
                             shape : 'image',
-                            image : html.iconsPath + 'cloud.png',
+                            image : staticsPath + 'cloud.png',
                             size: 50,
                         },
                         routerDevice : {
                             shape : 'image',
-                            image : html.iconsPath + 'router.png',
+                            image : staticsPath + 'router.png',
                             size: 45,
                         },
                         switchDevice : {
                             shape : 'image',
-                            image : html.iconsPath + 'switch.png',
+                            image : staticsPath + 'switch.png',
                             size: 35,
                         },
                         pcDevice : {
                             shape : 'image',
-                            image : html.iconsPath + 'PC.png',
+                            image : staticsPath + 'PC.png',
                             size: 45,
                         }
                     },
@@ -773,9 +773,17 @@ var ptAnywhere = (function () {
         deviceModificationDialog.create(hiddenComponentContents, 'modify-device');
     }
 
+    function addSlashIfNeeded(url) {
+      if (url.indexOf('/', this.length - 1) === -1 ) {
+        return url + '/';
+      }
+      return url;
+    }
+
     // Widget configurator/initializer
-    function init(selector, apiURL, customSettings) {
+    function init(selector, apiURL, pathToStatics, customSettings) {
         widgetSelector = $(selector);
+        staticsPath = addSlashIfNeeded(pathToStatics);
 
         var settings = { // Default values
             createSession: false,
