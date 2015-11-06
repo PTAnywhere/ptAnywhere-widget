@@ -81,7 +81,7 @@ fieldset.creation-menu {
 
 fieldset.creation-menu legend {
   border: 0;
-  margin-top: 10px;  /* TODO check why not parent's padding does not affect it */
+  margin-top: 10px;  /* TODO check why parent's padding does not affect it */
   font-size: 14px;
 }
 
