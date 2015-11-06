@@ -870,6 +870,10 @@ var ptAnywhere = (function () {
         var settings = init(selector, pathToStatics, customSettings);
         loadComponents(settings, false);
         networkMap.update(networkData);
+        return {  // Controls to programatically modify the module
+            addDevice: networkMap.addNode,
+            reset: function() { networkMap.update(networkData); },
+        };
     }
 
     // exposed functions and classes
