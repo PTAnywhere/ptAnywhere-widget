@@ -171,12 +171,24 @@ var ptAnywhere = (function () {
         // Created the DOM that shorty afterwards will be replaced by the network map
         function createTemporaryDOM() {
             var ret = $('<div class="network"></div>');
-            ret.append('<img class="' + html.cLoadingIcon + '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
+            ret.append('<div class="loading"><img class="' + html.cLoadingIcon +
+                        '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
                         '<div style="text-align: center;">' +
                         '<p>' + res.network.loading + '<p>' +
                         '<p id="' + html.idLoadingMessage + '"></p>' +
-                        '</div>');
+                        '</div></div>');
+            ret.append('<div class="map"></div>');
             return ret;
+        }
+
+        function showLoading() {
+            $('.loading', containerSelector).show();
+            $('.map', containerSelector).hide();
+        }
+
+        function showTopology() {
+            $('.loading', containerSelector).hide();
+            $('.map', containerSelector).show();
         }
 
         function getSelectedNode() {
@@ -284,7 +296,7 @@ var ptAnywhere = (function () {
                         ptAnywhere: res.manipulationMenu
                     },
                 };
-                network = new vis.Network(containerSelector.get(0), visData, options);
+                network = new vis.Network($('.map', containerSelector).get(0), visData, options);
                 if (isInteractive) {
                     network.on('doubleClick', function() {
                         var selected = getSelectedNode();
@@ -295,13 +307,15 @@ var ptAnywhere = (function () {
             }
         }
 
-        function createMap(containerSelctor, isInteractive) {
+        function createMap(isInteractive) {
             containerSelector = createTemporaryDOM();
+            showLoading();
             drawTopology(isInteractive);
             return containerSelector;
         }
 
         function update(responseData) {
+            showTopology();
             // Load data
             if (responseData.devices!=null) {
                 nodes.clear();
@@ -852,7 +866,7 @@ var ptAnywhere = (function () {
     // End deviceModificationDialog module
 
     function loadComponents(settings, isInteractive) {
-        var netSelector = networkMap.create(netSelector, isInteractive);  // Always loaded
+        var netSelector = networkMap.create(isInteractive);  // Always loaded
         widgetSelector.append(netSelector);
         var creationMenu = dragAndDropDeviceMenu.create(widgetSelector, netSelector);
         widgetSelector.append(creationMenu);
