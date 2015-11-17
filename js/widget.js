@@ -928,10 +928,10 @@ var ptAnywhere = (function () {
             }, function(tryCount, maxRetries, errorType) {
                 var errorMessage;
                 switch (errorType) {
-                    case PacketTracer.UNAVAILABLE:
+                    case packetTracer.UNAVAILABLE:
                                 errorMessage = res.network.errorUnavailable;
                                 break;
-                    case PacketTracer.TIMEOUT:
+                    case packetTracer.TIMEOUT:
                                 errorMessage = res.network.errorTimeout;
                                 break;
                     default: errorMessage = res.network.errorUnknown;
