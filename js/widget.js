@@ -931,21 +931,23 @@ var ptAnywhere = (function () {
             ptClient = new packetTracer.Client(apiURL, function() {
                 showMessage(res.network.notLoaded);
             });
-            ptClient.getNetwork(function(data) {
-                networkMap.update(data);
-            }, function(tryCount, maxRetries, errorType) {
-                var errorMessage;
-                switch (errorType) {
-                    case packetTracer.UNAVAILABLE:
-                                errorMessage = res.network.errorUnavailable;
-                                break;
-                    case packetTracer.TIMEOUT:
-                                errorMessage = res.network.errorTimeout;
-                                break;
-                    default: errorMessage = res.network.errorUnknown;
-                }
-                networkMap.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
-            });
+            ptClient.getNetwork(
+                function(tryCount, maxRetries, errorType) {
+                    var errorMessage;
+                    switch (errorType) {
+                        case packetTracer.UNAVAILABLE:
+                                    errorMessage = res.network.errorUnavailable;
+                                    break;
+                        case packetTracer.TIMEOUT:
+                                    errorMessage = res.network.errorTimeout;
+                                    break;
+                        default: errorMessage = res.network.errorUnknown;
+                    }
+                    networkMap.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
+                }).
+                done(function(data) {
+                    networkMap.update(data);
+                });
         }
     }
 
