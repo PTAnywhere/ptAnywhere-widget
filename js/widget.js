@@ -253,10 +253,10 @@ var ptAnywhere = (function () {
                                     if (isInteractive) {
                                         var fromDevice = nodes.get(data.from);
                                         var toDevice = nodes.get(data.to);
-                                        var sCallback = function(edgeId, edgeUrl) {
+                                        var sCallback = function(newLink) {
                                                             edges.add([{
-                                                                id: edgeId,
-                                                                url: edgeUrl,
+                                                                id: newLink.id,
+                                                                url: newLink.url,
                                                                 from: fromDevice.id,
                                                                 to: toDevice.id,
                                                             }]);
@@ -483,7 +483,8 @@ var ptAnywhere = (function () {
                 'SUBMIT': function() {
                             var fromPortURL = $('.' + clazz.fromInterface + ' option:selected', dialogSelector).val();
                             var toPortURL = $('.' + clazz.toInterface + ' option:selected', dialogSelector).val();
-                            ptClient.createLink(fromPortURL, toPortURL, successfulCreationCallback).
+                            ptClient.createLink(fromPortURL, toPortURL).
+                                       done(successfulCreationCallback).
                                        always(close);
                         },
                 Cancel: close
