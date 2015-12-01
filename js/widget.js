@@ -266,7 +266,7 @@ var ptAnywhere = (function () {
                                  },
                         editNode: function(data, callback) {
                                       if (isInteractive) {
-                                          var successUpdatingNode = function(result) { nodes.update(result); };
+                                          var successUpdatingNode = function(modifiedDevice) { nodes.update(modifiedDevice); };
                                           deviceModificationDialog.open(nodes.get(data.id), successUpdatingNode);
                                           callback(data);
                                       }
@@ -511,7 +511,6 @@ var ptAnywhere = (function () {
             if (errorData.status==410) {
                 close(); // session expired, error will be shown replacing the map.
             } else {
-                console.error('Something went wrong getting this devices\' available ports ' + device.id + '.')
                 showErrorInPanel('Unable to get ' + device.label + ' device\'s ports.');
             }
         }
@@ -770,13 +769,15 @@ var ptAnywhere = (function () {
                       fail(closeDialog);
         }
 
-        function handleModificationSubmit(callback, alwaysCallback) {
+        function handleModificationSubmit(successCallback, alwaysCallback) {
             // Check the tab
             var selectedTab = $('li.ui-state-active', dialogSelector).attr('aria-controls');
             if (selectedTab==html.tab1) { // General settings
                 var deviceLabel = $('input[name="' + html.nameField + '"]', dialogSelector).val();
                 var defaultGateway = $('input[name="' + html.gatewayField + '"]', dialogSelector).val();
-                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway, callback).always(alwaysCallback);
+                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway).
+                                done(successCallback).
+                                always(alwaysCallback);
             } else if (selectedTab==html.tab2) { // Interfaces
                 var portURL = $('select[name="' + html.iFaceSelector + '"]', dialogSelector).val();
                 var portIpAddress = $('input[name="' + html.ipField + '"]', dialogSelector).val();
