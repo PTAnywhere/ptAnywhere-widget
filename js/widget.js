@@ -507,27 +507,30 @@ var ptAnywhere = (function () {
             }
         }
 
-        function afterLoadingError(device, data) {
-            console.error('Something went wrong getting this devices\' available ports ' + device.id + '.')
-            showErrorInPanel('Unable to get ' + device.label + ' device\'s ports.');
+        function afterLoadingError(device, errorData) {
+            if (errorData.status==410) {
+                close(); // session expired, error will be shown replacing the map.
+            } else {
+                console.error('Something went wrong getting this devices\' available ports ' + device.id + '.')
+                showErrorInPanel('Unable to get ' + device.label + ' device\'s ports.');
+            }
         }
 
         function loadAvailablePorts() {
             oneLoaded = false;
-            ptClient.getAvailablePorts(fromDevice,
-                                        function(errorData) {
-                                            afterLoadingError(fromDevice, errorData);
-                                        }, close).
+            ptClient.getAvailablePorts(fromDevice).
                       done(function(ports) {
                           afterLoadingSuccess(ports, true);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(fromDevice, errorData);
                       });
-            ptClient.getAvailablePorts(toDevice,
-                                        function(errorData) {
-                                            afterLoadingError(toDevice, errorData);
-                                        },
-                                        close).
+            ptClient.getAvailablePorts(toDevice).
                       done(function(ports) {
                           afterLoadingSuccess(ports, false);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(toDevice, errorData);
                       });
         }
 
