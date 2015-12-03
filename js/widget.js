@@ -1,9 +1,14 @@
+// Define module if needed.
+if (typeof(ptAnywhereWidgets) === 'undefined') {
+    var ptAnywhereWidgets = {};
+}
+
 /**
  * Widget creator module and its submodules
  */
 // The Revealing Module Pattern
 // http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
-var ptAnywhereWidget = (function () {
+ptAnywhereWidgets.all = (function () {
 
     var widgetSelector;
     var ptClient;  // JS client of the HTTP API
@@ -433,7 +438,7 @@ var ptAnywhereWidget = (function () {
             loaded: 'loaded',
             error: 'error',
             errorMsg: 'error-msg',
-        }
+        };
 
 
         function createDOM(parentSelector, dialogId) {
@@ -863,7 +868,7 @@ var ptAnywhereWidget = (function () {
             menuSelector = createDOM();
             for (var i in draggableElements) {
                 var el = draggableElements[i];
-                new ptAnywhereWidget.DraggableDevice($('.' + el.element, menuSelector), dragToCanvas, el.element);
+                new DraggableDevice($('.' + el.element, menuSelector), dragToCanvas, el.element);
             }
             return menuSelector;
         }

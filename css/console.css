@@ -1,0 +1,30 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font: 10pt monospace, Helvetica, Arial;
+}
+
+.messages {
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+}
+
+.interactive {
+  width: 100%;
+}
+
+.lastLine {
+  float: left;
+  margin-right: 4px;
+}
+
+.current {
+  display: block;
+  height: 10pt;
+}
