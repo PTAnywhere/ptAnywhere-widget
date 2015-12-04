@@ -37,6 +37,29 @@ ptAnywhereWidgets.all = (function () {
         }
         return ret;
     }
+
+    function createModal(modalId, modalTitle, modalBody, hasSubmitButton) {
+        var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
+                    '  <div class="modal-dialog" role="document">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                    '        <h4 class="modal-title" id="' + modalId + 'Label">' + modalTitle + '</h4>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    modalBody.html() +
+                    '      </div>' +
+                    '      <div class="modal-footer">' +
+                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>';
+        if (hasSubmitButton) {
+            modal += '        <button type="button" class="btn btn-primary">Submit</button>';
+        }
+        modal +=    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>';
+        return modal;
+    }
     // End: utility functions
 
     // Module which handles command line
@@ -461,16 +484,17 @@ ptAnywhereWidgets.all = (function () {
                               '  <p>' + res.linkDialog.error + '</p>' +
                               '  <p class="' + clazz.errorMsg + '"></p>' +
                               '</div>');
-            parentSelector.append('<div id="' + dialogId + '">' + dialogForm.html() + '</div>');
+            var e = createModal(dialogId, res.linkDialog.title, dialogForm, true);
+            parentSelector.append(e);
         }
 
         function showPanel(classToShow) {
             var classNames = [clazz.loading, clazz.loaded, clazz.error];
             for (i in classNames) {
                 if (classNames[i]==classToShow) {
-                    $(" ." + classNames[i], dialogSelector).show();
+                    $('.' + classNames[i], dialogSelector).show();
                 } else {
-                    $(" ." + classNames[i], dialogSelector).hide();
+                    $('.' + classNames[i], dialogSelector).hide();
                 }
             }
         }
@@ -478,23 +502,6 @@ ptAnywhereWidgets.all = (function () {
         function showErrorInPanel(errorMessage) {
             $('.' + clazz.error + ' .' + clazz.errorMsg, dialogSelector).text(errorMessage);
             showPanel(clazz.error);
-        }
-
-        function getReducedOptions() {
-            return { Cancel: close };
-        }
-
-        function getOptions() {
-            return {
-                'SUBMIT': function() {
-                            var fromPortURL = $('.' + clazz.fromInterface + ' option:selected', dialogSelector).val();
-                            var toPortURL = $('.' + clazz.toInterface + ' option:selected', dialogSelector).val();
-                            ptClient.createLink(fromPortURL, toPortURL).
-                                       done(successfulCreationCallback).
-                                       always(close);
-                        },
-                Cancel: close
-            };
         }
 
         function afterLoadingSuccess(ports, isFrom) {
@@ -507,7 +514,7 @@ ptAnywhereWidgets.all = (function () {
                 if (oneLoaded) { // TODO Check race conditions!
                     // Success: both loaded!
                     showPanel(clazz.loaded);
-                    dialogSelector.dialog('option', 'buttons', getOptions());
+                    showPrimaryButton();
                 } else {
                     oneLoaded = true;
                 }
@@ -540,6 +547,14 @@ ptAnywhereWidgets.all = (function () {
                       });
         }
 
+        function showPrimaryButton() {
+            $('.btn-primary', dialogSelector).show();
+        }
+
+        function hidePrimaryButton() {
+            $('.btn-primary', dialogSelector).hide();
+        }
+
         function openDialog(fromD, toD, callback) {
             fromDevice = fromD;
             toDevice = toD;
@@ -549,18 +564,20 @@ ptAnywhereWidgets.all = (function () {
             $('.' + clazz.fromName, dialogSelector).text(fromDevice.label);
             $('.' + clazz.toName, dialogSelector).text(toDevice.label);
 
-            dialogSelector.dialog({
-                title: res.linkDialog.title,
-                autoOpen: false, height: 300, width: 400, modal: true, draggable: false,
-                buttons: getReducedOptions()
-             });
-            var form = dialogSelector.find('form').on('submit', function( event ) { event.preventDefault(); });
-            dialogSelector.dialog('open');
+            hidePrimaryButton();
+            dialogSelector.modal('show');
+            $('.btn-primary', dialogSelector).click(function() {
+                var fromPortURL = $('.' + clazz.fromInterface + ' option:selected', dialogSelector).val();
+                var toPortURL = $('.' + clazz.toInterface + ' option:selected', dialogSelector).val();
+                ptClient.createLink(fromPortURL, toPortURL).
+                           done(successfulCreationCallback).
+                           always(close);
+            });
             loadAvailablePorts();
         }
 
         function close() {
-            dialogSelector.dialog('close');
+            dialogSelector.modal('hide');
         }
 
         function createDialog(parentSelector, dialogId) {
@@ -889,12 +906,18 @@ ptAnywhereWidgets.all = (function () {
         hiddenComponentContents.hide();
         widgetSelector.append(hiddenComponentContents);
 
+        // jQuery UI dialogs
         if (settings.commandLine) {
             commandLine.init(hiddenComponentContents);
         }
-        linkDialog.create(hiddenComponentContents, 'link-devices');
         deviceCreationDialog.create(hiddenComponentContents, 'create-device');
         deviceModificationDialog.create(hiddenComponentContents, 'modify-device');
+
+        // Bootstrap modals
+        // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
+        var visibleComponentContents = $('<div></div>');
+        $('body').append(visibleComponentContents);
+        linkDialog.create(visibleComponentContents, 'link-devices');
     }
 
     function addSlashIfNeeded(url) {
