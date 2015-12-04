@@ -140,7 +140,7 @@ ptAnywhereWidgets.console = (function () {
 
     function createDOM(parentSelector) {
         var interactiveDiv = $('<div class="' + html.cInteractive + '"></div>');
-        interactiveDiv.append('<span class="' + html.cPrompt + '"></span><span> </span>');
+        interactiveDiv.append('<span class="' + html.cPrompt + '"></span><span>&nbsp;</span>');
         interactiveDiv.append('<span class="' + html.cCurrent + '" contentEditable="true"></span>');
         parentSelector.append('<div class="' + html.cMessages + '"></div>');
         parentSelector.append(interactiveDiv);
