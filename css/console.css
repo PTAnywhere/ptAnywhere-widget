@@ -19,12 +19,11 @@ body {
   width: 100%;
 }
 
-.lastLine {
-  float: left;
-  margin-right: 4px;
+.current {
+  min-width: 100px;
+  height: 10pt;
 }
 
-.current {
-  display: block;
-  height: 10pt;
+.current:focus, .current:hover {
+    outline: 0;
 }

@@ -11,7 +11,7 @@ ptAnywhereWidgets.console = (function () {
     var html = { // HTML labels
         cMessages: 'messages',
         cInteractive: 'interactive',
-        cLastLine: 'lastLine',
+        cPrompt: 'prompt',
         cCurrent: 'current',
         nBottom: 'bottom',
     };
@@ -56,23 +56,23 @@ ptAnywhereWidgets.console = (function () {
         };
     }
 
-    function addContent(console, msg) {
+    function addContent(cmd, msg) {
         // Not sure that we will ever get more than a line, but just in case.
         var lines = msg.split('\n');
         if (lines.length>1) {
-            for (var i=0; i<lines.length-1; i++) { // Unnecessary
+            for (var i=0; i<lines.length-1; i++) { // Unnecessary?
                 if (i==0) {
-                    var lastLine = $('.lastLine', console.selector).text();
+                    var lastLine = $('.' + html.cPrompt, cmd.selector).text();
                     if (lastLine.trim()!=='--More--')
-                        $('.' + html.cMessages, console.selector).append(lastLine);
-                    $('.' + html.cLastLine, console.selector).text('');
+                        $('.' + html.cMessages, cmd.selector).append(lastLine);
+                    $('.' + html.cPrompt, cmd.selector).text('');
                 }
-                $('.' + html.cMessages, console.selector).append(lines[i] + '<br />');
+                $('.' + html.cMessages, cmd.selector).append(lines[i] + '<br />');
             }
         }
-        $('.' + html.cLastLine, console.selector).append(lines[lines.length-1]);
+        $('.' + html.cPrompt, cmd.selector).append(lines[lines.length-1]);
         scrollToBottom();
-        $('.' + html.cCurrent, console.selector).focus();
+        $('.' + html.cCurrent, cmd.selector).focus();
     }
 
     Console.prototype.onUpdate = function(message) {
@@ -140,7 +140,7 @@ ptAnywhereWidgets.console = (function () {
 
     function createDOM(parentSelector) {
         var interactiveDiv = $('<div class="' + html.cInteractive + '"></div>');
-        interactiveDiv.append('<span class="' + html.cLastLine + '"></span>');
+        interactiveDiv.append('<span class="' + html.cPrompt + '"></span><span> </span>');
         interactiveDiv.append('<span class="' + html.cCurrent + '" contentEditable="true"></span>');
         parentSelector.append('<div class="' + html.cMessages + '"></div>');
         parentSelector.append(interactiveDiv);
@@ -197,7 +197,7 @@ ptAnywhereWidgets.console = (function () {
           }
       });
 
-      $('.' + html.cLastLine, cmd.selector).click(function() {
+      $('.' + html.cInteractive, cmd.selector).click(function() {
           $('.' + html.cCurrent, cmd.selector).focus();
       });
     }
