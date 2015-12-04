@@ -60,6 +60,16 @@ ptAnywhereWidgets.all = (function () {
                     '</div>';
         return modal;
     }
+
+
+    function showPrimaryButton(dialogSelector) {
+        $('.btn-primary', dialogSelector).show();
+    }
+
+    function hidePrimaryButton(dialogSelector) {
+        $('.btn-primary', dialogSelector).hide();
+    }
+
     // End: utility functions
 
     // Module which handles command line
@@ -514,7 +524,7 @@ ptAnywhereWidgets.all = (function () {
                 if (oneLoaded) { // TODO Check race conditions!
                     // Success: both loaded!
                     showPanel(clazz.loaded);
-                    showPrimaryButton();
+                    showPrimaryButton(dialogSelector);
                 } else {
                     oneLoaded = true;
                 }
@@ -523,7 +533,7 @@ ptAnywhereWidgets.all = (function () {
 
         function afterLoadingError(device, errorData) {
             if (errorData.status==410) {
-                close(); // session expired, error will be shown replacing the map.
+                dialogSelector.modal('hide'); // session expired, error will be shown replacing the map.
             } else {
                 showErrorInPanel('Unable to get ' + device.label + ' device\'s ports.');
             }
@@ -547,14 +557,6 @@ ptAnywhereWidgets.all = (function () {
                       });
         }
 
-        function showPrimaryButton() {
-            $('.btn-primary', dialogSelector).show();
-        }
-
-        function hidePrimaryButton() {
-            $('.btn-primary', dialogSelector).hide();
-        }
-
         function openDialog(fromD, toD, callback) {
             fromDevice = fromD;
             toDevice = toD;
@@ -564,20 +566,18 @@ ptAnywhereWidgets.all = (function () {
             $('.' + clazz.fromName, dialogSelector).text(fromDevice.label);
             $('.' + clazz.toName, dialogSelector).text(toDevice.label);
 
-            hidePrimaryButton();
+            hidePrimaryButton(dialogSelector);
             dialogSelector.modal('show');
             $('.btn-primary', dialogSelector).click(function() {
                 var fromPortURL = $('.' + clazz.fromInterface + ' option:selected', dialogSelector).val();
                 var toPortURL = $('.' + clazz.toInterface + ' option:selected', dialogSelector).val();
                 ptClient.createLink(fromPortURL, toPortURL).
                            done(successfulCreationCallback).
-                           always(close);
+                           always(function() {
+                               dialogSelector.modal('hide');
+                           });
             });
             loadAvailablePorts();
-        }
-
-        function close() {
-            dialogSelector.modal('hide');
         }
 
         function createDialog(parentSelector, dialogId) {
@@ -605,24 +605,27 @@ ptAnywhereWidgets.all = (function () {
 
         function createDOM(parentSelector, dialogId) {
             var dialogForm = $('<form></form>');
-            dialogForm.append('<fieldset style="margin-top: 15px;">' +
-                              '  <div>' +
-                              '    <label for="' + html.nameId + '">' + res.name + ': </label>' +
-                              '    <input type="text" name="' + html.nameField + '" id="' + html.nameId + '" style="float: right;">' +
+            dialogForm.append('<fieldset>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + html.nameId + '" class="col-md-3">' + res.name + ': </label>' +
+                              '    <div class="col-md-9">' +
+                              '      <input type="text" name="' + html.nameField + '" id="' + html.nameId + '" class="form-control">' +
+                              '    </div>' +
                               '  </div>' +
-                              '  <div style="margin-top: 20px;">' +
-                              '    <label for="' + html.typeId + '">' + res.creationDialog.type + ': </label>' +
-                              '    <span style="float: right;">' +
-                              '      <select name="' + html.typeField + '" id="' + html.typeId + '">' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + html.typeId + '" class="col-md-3">' + res.creationDialog.type + ': </label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select name="' + html.typeField + '" id="' + html.typeId + '" class="form-control">' +
                               '        <option value="cloud" data-class="cloud">Cloud</option>' +
                               '        <option value="router" data-class="router">Router</option>' +
                               '        <option value="switch" data-class="switch">Switch</option>' +
                               '        <option value="pc" data-class="pc">PC</option>' +
                               '      </select>' +
-                              '    </span>' +
+                              '    </div>' +
                               '  </div>' +
                               '</fieldset>');
-            parentSelector.append('<div id="' + dialogId + '">' + dialogForm.html() + '</div>');
+            var e = createModal(dialogId, res.creationDialog.title, dialogForm, true);
+            parentSelector.append(e);
         }
 
         function addDevice(label, type, x, y, callback) {
@@ -636,45 +639,23 @@ ptAnywhereWidgets.all = (function () {
         }
 
         function closeDialog() {
-            dialogSelector.dialog('close');
+            dialogSelector.modal('hide');
         }
 
         function openDialog(x, y, successfulCreationCallback) {
-            dialogSelector.dialog({
-                title: res.creationDialog.title,
-                autoOpen: false, height: 300, width: 400, modal: true, draggable: false,
-                buttons: {
-                    'SUBMIT': function() {
-                        // We could also simply use their IDs...
-                        var name = $('input[name="' + html.nameField + '"]', dialogSelector).val().trim();
-                        var type = $('select[name="' + html.typeField + '"]', dialogSelector).val();
-                        addDevice(name, type, x, y, successfulCreationCallback).always(closeDialog);
-                    },
-                    Cancel: closeDialog
-                }
-             });
+            $('.btn-primary', dialogSelector).click(function() {
+                // We could also simply use their IDs...
+                var name = $('input[name="' + html.nameField + '"]', dialogSelector).val().trim();
+                var type = $('select[name="' + html.typeField + '"]', dialogSelector).val();
+                addDevice(name, type, x, y, successfulCreationCallback).always(closeDialog);
+            });
             var form = dialogSelector.find('form').on('submit', function( event ) { event.preventDefault(); });
-            $('#' + html.typeId).iconselectmenu().iconselectmenu('menuWidget').addClass('ui-menu-icons customicons');
-            dialogSelector.dialog('open');
+            dialogSelector.modal('show');
         }
 
         function createDialog(parentSelector, dialogId) {
             createDOM(parentSelector, dialogId);
             dialogSelector = $("#" + dialogId, parentSelector);
-            // Hack needed to show iconselectmenu inside dialog
-            $.widget('custom.iconselectmenu', $.ui.selectmenu, {
-                _renderItem: function( ul, item ) {
-                    var li = $('<li>', { text: item.label } );
-                    if ( item.disabled ) {
-                        li.addClass('ui-state-disabled');
-                    }
-                    $( '<span>', {
-                        style: item.element.attr('data-style'),
-                        'class': 'ui-icon ' + item.element.attr('data-class')
-                     }).appendTo( li );
-                     return li.appendTo( ul );
-                }
-            });
         }
 
         return {
@@ -910,13 +891,13 @@ ptAnywhereWidgets.all = (function () {
         if (settings.commandLine) {
             commandLine.init(hiddenComponentContents);
         }
-        deviceCreationDialog.create(hiddenComponentContents, 'create-device');
         deviceModificationDialog.create(hiddenComponentContents, 'modify-device');
 
         // Bootstrap modals
         // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
         var visibleComponentContents = $('<div></div>');
         $('body').append(visibleComponentContents);
+        deviceCreationDialog.create(visibleComponentContents, 'create-device');
         linkDialog.create(visibleComponentContents, 'link-devices');
     }
 
