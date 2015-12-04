@@ -479,16 +479,22 @@ ptAnywhereWidgets.all = (function () {
             dialogForm.append('<div class="' + clazz.loading + '">' + res.loadingInfo + '</div>');
             dialogForm.append('<div class="' + clazz.loaded + '">' +
                               '  <p>' + res.linkDialog.select + '</p>' +
-                              '  <p><span class="' + clazz.fromName + '">Device 1</span>:' +
-                              '    <select class="' + clazz.fromInterface + '" size="1">' +
-                              '      <option value="loading">' + res.loading + '</option>' +
-                              '     </select>' +
-                              '  </p>' +
-                              '  <p><span class="' + clazz.toName + '">Device 2</span>:' +
-                              '    <select class="' + clazz.toInterface + '" size="1">' +
-                              '      <option value="loading">' + res.loading + '</option>' +
-                              '    </select>' +
-                              '  </p>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + clazz.fromInterface + '" class="col-md-3 ' + clazz.fromName + '">Device 1</label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select class="form-control ' + clazz.fromInterface + '" size="1">' +
+                              '        <option value="loading">' + res.loading + '</option>' +
+                              '       </select>' +
+                              '    </div>' +
+                              '  </div>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + clazz.toInterface + '" class="col-md-3 ' + clazz.toName + '">Device 2</label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select class="form-control ' + clazz.toInterface + '" size="1">' +
+                              '        <option value="loading">' + res.loading + '</option>' +
+                              '      </select>' +
+                              '    </div>' +
+                              '  </div>' +
                               '</div>');
             dialogForm.append('<div class="' + clazz.error + '">' +
                               '  <p>' + res.linkDialog.error + '</p>' +
