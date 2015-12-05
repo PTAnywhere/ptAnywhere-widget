@@ -78,18 +78,27 @@ ptAnywhereWidgets.all = (function () {
         var dialogSelector;
 
         function createDOM(parentSelector) {
-            dialogSelector = $('<div></div>');
+            dialogSelector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
+            var modal = '<div class="modal-dialog" role="document">' +
+                        '  <div class="modal-content">' +
+                        '    <div class="modal-header">' +
+                        '      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                        '      <h4 class="modal-title" id="cmdModal">' + res.commandLineDialog.title + '</h4>' +
+                        '    </div>' +
+                        '    <div class="modal-body">' +
+                        '    </div>' +
+                        '  </div>' +
+                        '</div>';
+            dialogSelector.append(modal);
             parentSelector.append(dialogSelector);
         }
 
         function openIFrame(node) {
-            var dialog = dialogSelector.dialog({
-                title: res.commandLineDialog.title,
-                autoOpen: false, height: 400, width: 600, modal: true, draggable: false,
-                close: function() { dialog.html(""); }
-            });
-            dialog.html('<div class="iframeWrapper"><iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe></div>');
-            dialog.dialog('open');
+            $('.modal-body', dialogSelector).html(
+                '<div class="iframeWrapper">' +
+                '   <iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe>' +
+                '</div>');
+            dialogSelector.modal('show');
         }
 
         // Reveal public pointers to
@@ -910,22 +919,16 @@ ptAnywhereWidgets.all = (function () {
         var creationMenu = dragAndDropDeviceMenu.create(widgetSelector, netSelector);
         widgetSelector.append(creationMenu);
 
-        var hiddenComponentContents = $('<div></div>');
-        hiddenComponentContents.hide();
-        widgetSelector.append(hiddenComponentContents);
-
-        // jQuery UI dialogs
-        if (settings.commandLine) {
-            commandLine.init(hiddenComponentContents);
-        }
-
-        // Bootstrap modals
         // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
         var visibleComponentContents = $('<div></div>');
         $('body').append(visibleComponentContents);
+
         deviceCreationDialog.create(visibleComponentContents, 'create-device');
         deviceModificationDialog.create(visibleComponentContents, 'modify-device');
         linkDialog.create(visibleComponentContents, 'link-devices');
+        if (settings.commandLine) {
+            commandLine.init(visibleComponentContents);
+        }
     }
 
     function addSlashIfNeeded(url) {
