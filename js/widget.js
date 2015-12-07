@@ -888,7 +888,7 @@ ptAnywhereWidgets.all = (function () {
         }
 
         function createDOM() {
-            var fieldset = $('<fieldset class="creation-menu"></fieldset>');
+            var fieldset = $('<fieldset></fieldset>');
             fieldset.append('<legend>' + res.creationMenu.legend + '</legend>');
             var rowHolder = $('<div class="col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2 col-xs-12"></div>');
             var figuresHolder = $('<div class="row"></div>');
@@ -897,7 +897,9 @@ ptAnywhereWidgets.all = (function () {
             }
             rowHolder.append(figuresHolder);
             fieldset.append(rowHolder);
-            return fieldset;
+            var menu = $('<div class="creation-menu"></div>');
+            menu.append(fieldset);
+            return menu;
         }
 
         function createMenu(parentSelector, dragToCanvas) {
