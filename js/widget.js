@@ -276,17 +276,17 @@ ptAnywhereWidgets.all = (function () {
                         },
                         routerDevice : {
                             shape : 'image',
-                            image : staticsPath + 'router.png',
+                            image : staticsPath + 'router_cropped.png',
                             size: 45,
                         },
                         switchDevice : {
                             shape : 'image',
-                            image : staticsPath + 'switch.png',
+                            image : staticsPath + 'switch_cropped.png',
                             size: 35,
                         },
                         pcDevice : {
                             shape : 'image',
-                            image : staticsPath + 'PC.png',
+                            image : staticsPath + 'pc_cropped.png',
                             size: 45,
                         }
                     },
@@ -877,7 +877,7 @@ ptAnywhereWidgets.all = (function () {
             { element: 'cloud', icon: 'cloud.png', caption: 'Cloud'},
             { element: 'router', icon: 'router.png', caption: 'Router'},
             { element: 'switch', icon: 'switch.png', caption: 'Switch'},
-            { element: 'pc', icon: 'PC.png', caption: 'Pc'},
+            { element: 'pc', icon: 'pc.png', caption: 'Pc'},
         ];
 
         function getFigureDOM(draggableElement) {
