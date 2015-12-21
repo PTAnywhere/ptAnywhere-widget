@@ -14,14 +14,15 @@ ptAnywhereWidgets.components = (function () {
     var LINK = 'linkDialog';
     var CMD = 'cmdDialog';
 
+
     function createComponents(settings) {
         // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
         var componentsWrapper = $('<div></div>');
         $('body').append(componentsWrapper);
 
         var components = {};
-        /*components[CREATION] = deviceCreationDialog.create(componentsWrapper, 'create-device');
-        components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');
+        components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device');
+        /*components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');
         components[LINK] = linkDialog.create(componentsWrapper, 'link-devices');*/
         if (settings.commandLine) {
             components[CMD] = new cmdDialog.Object(componentsWrapper);
@@ -29,7 +30,48 @@ ptAnywhereWidgets.components = (function () {
         return components;
     }
 
-    // Module which handles command line
+
+    // Begin: utility functions
+    //  (They are used in many submodules)
+    var MODAL = {  // Literals for classes, identifiers or names
+        cPrimaryBtn: 'btn-primary',
+    };
+
+    function createModal(modalId, modalTitle, modalBody, hasSubmitButton) {
+        var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
+                    '  <div class="modal-dialog" role="document">' +
+                    '    <div class="modal-content">' +
+                    '      <div class="modal-header">' +
+                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                    '        <h4 class="modal-title" id="' + modalId + 'Label">' + modalTitle + '</h4>' +
+                    '      </div>' +
+                    '      <div class="modal-body">' +
+                    modalBody.html() +
+                    '      </div>' +
+                    '      <div class="modal-footer">' +
+                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>';
+        if (hasSubmitButton) {
+            modal += '        <button type="button" class="btn ' + MODAL.cPrimaryBtn + '">Submit</button>';
+        }
+        modal +=    '      </div>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>';
+        return modal;
+    }
+
+
+    function showPrimaryButton(dialogSelector) {
+        $('.' + html.cPrimaryBtn, dialogSelector).show();
+    }
+
+    function hidePrimaryButton(dialogSelector) {
+        $('.' + html.cPrimaryBtn, dialogSelector).hide();
+    }
+    // End: utility functions
+
+
+    // Component to embed command line
     var cmdDialog = (function () {
         function Dialog(parentSelector) {
             this.selector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
@@ -58,7 +100,72 @@ ptAnywhereWidgets.components = (function () {
         return {
             Object: Dialog
         };
-    })();  // End commandLine module
+    })();  // End cmdDialog module
+
+
+    // Component to embed the creation dialog
+    var creationDialog = (function () {
+
+        var html = {  // Literals for classes, identifiers or names
+            nameField: 'name',
+            nameId: 'newDeviceName',
+            typeField: 'type',
+            typeId: 'newDeviceType',
+        };
+
+        function Dialog(parentSelector, dialogId) {
+            var dialogForm = $('<form></form>');
+            dialogForm.append('<fieldset>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + html.nameId + '" class="col-md-3">' + res.name + ': </label>' +
+                              '    <div class="col-md-9">' +
+                              '      <input type="text" name="' + html.nameField + '" id="' + html.nameId + '" class="form-control">' +
+                              '    </div>' +
+                              '  </div>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + html.typeId + '" class="col-md-3">' + res.creationDialog.type + ': </label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select name="' + html.typeField + '" id="' + html.typeId + '" class="form-control">' +
+                              '        <option value="cloud" data-class="cloud">Cloud</option>' +
+                              '        <option value="router" data-class="router">Router</option>' +
+                              '        <option value="switch" data-class="switch">Switch</option>' +
+                              '        <option value="pc" data-class="pc">PC</option>' +
+                              '      </select>' +
+                              '    </div>' +
+                              '  </div>' +
+                              '</fieldset>');
+            var e = createModal(dialogId, res.creationDialog.title, dialogForm, true);
+            parentSelector.append(e);
+            this.selector = $("#" + dialogId, parentSelector);
+
+            $('form', this.dialogSelector).on('submit', function( event ) { event.preventDefault(); });
+        }
+
+        Dialog.prototype.open = function() {
+            this.selector.modal('show');
+        };
+
+        Dialog.prototype.close = function() {
+            this.selector.modal('hide');
+        };
+
+        Dialog.prototype.getPrimaryButton = function() {
+            return $('.' + MODAL.cPrimaryBtn, this.selector);
+        };
+
+        Dialog.prototype.getDeviceName = function() {
+            return $('input[name="' + html.nameField + '"]', this.selector).val().trim();
+        };
+
+        Dialog.prototype.getDeviceType = function() {
+            return $('select[name="' + html.typeField + '"]', this.selector).val();
+        };
+
+        return {
+            Object: Dialog
+        };
+    })();  // End creationDialog module
+
 
     // exposed functions and classes
     return {
@@ -74,9 +181,13 @@ ptAnywhereWidgets.components = (function () {
 /**
  * The interactive part of the widgets.
  */
-ptAnywhereWidgets.interactive = (function () {
+ptAnywhereWidgets.interaction = (function () {
 
-    function init(components) {
+    var ptClient;
+
+    function init(components, client) {
+        ptClient = client;
+        deviceCreation.init(components[ptAnywhereWidgets.components.CREATION_DIALOG]);
         if ( components.hasOwnProperty(ptAnywhereWidgets.components.CMD_DIALOG) ) {
             commandLine.init(components[ptAnywhereWidgets.components.CMD_DIALOG]);
         }
@@ -101,14 +212,54 @@ ptAnywhereWidgets.interactive = (function () {
 
         return {
             init: init,
-            open: openIFrame,
+            start: openIFrame,
         };
     })();  // End commandLine module
+
+
+    // Module for device creation
+    var deviceCreation = (function () {
+        var creationDialog;
+
+        function init(creationDialogObject) {
+            creationDialog = creationDialogObject;
+        }
+
+        function addDevice(label, type, x, y, callback) {
+            var newDevice = {
+                group: type,
+                x: x,
+                y: y
+            };
+            if (label!="") newDevice['label'] = label;
+            return ptClient.addDevice(newDevice).done(callback);
+        }
+
+        function openDialog(x, y, successfulCreationCallback) {
+            creationDialog.getPrimaryButton().click(function() {
+                // We could also simply use their IDs...
+                var name = creationDialog.getDeviceName();
+                var type = creationDialog.getDeviceType();
+                addDevice(name, type, x, y, successfulCreationCallback).
+                    always(function() {
+                        creationDialog.close();
+                    });
+            });
+            creationDialog.open();
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End deviceCreation module
+
 
     // exposed functions and classes
     return {
         init: init,
         commandLine: commandLine,
+        deviceCreation: deviceCreation,
     };
 })();
 
@@ -367,7 +518,7 @@ ptAnywhereWidgets.all = (function () {
                         initiallyActive: true,
                         addNode: function(data, callback) {
                                     if (isInteractive) {
-                                        deviceCreationDialog.open(data.x, data.y, addNode);
+                                        ptAnywhereWidgets.interaction.deviceCreation.start(data.x, data.y, addNode);
                                     }
                                  },
                         addEdge: function(data, callback) {
@@ -423,7 +574,7 @@ ptAnywhereWidgets.all = (function () {
                     network.on('doubleClick', function() {
                         var selected = getSelectedNode();
                         if (selected!=null)
-                            ptAnywhereWidgets.interactive.commandLine.open(selected);
+                            ptAnywhereWidgets.interaction.commandLine.start(selected);
                     });
                 }
             }
@@ -686,79 +837,6 @@ ptAnywhereWidgets.all = (function () {
         };
     })();
     // End linkDialog module
-
-    // Module for creation dialog
-    var deviceCreationDialog = (function () {
-
-        var dialogSelector = null;
-        var html = {  // Literals for classes, identifiers or names
-            nameField: 'name',
-            nameId: 'newDeviceName',
-            typeField: 'type',
-            typeId: 'newDeviceType',
-        };
-
-        function createDOM(parentSelector, dialogId) {
-            var dialogForm = $('<form></form>');
-            dialogForm.append('<fieldset>' +
-                              '  <div class="clearfix form-group">' +
-                              '    <label for="' + html.nameId + '" class="col-md-3">' + res.name + ': </label>' +
-                              '    <div class="col-md-9">' +
-                              '      <input type="text" name="' + html.nameField + '" id="' + html.nameId + '" class="form-control">' +
-                              '    </div>' +
-                              '  </div>' +
-                              '  <div class="clearfix form-group">' +
-                              '    <label for="' + html.typeId + '" class="col-md-3">' + res.creationDialog.type + ': </label>' +
-                              '    <div class="col-md-9">' +
-                              '      <select name="' + html.typeField + '" id="' + html.typeId + '" class="form-control">' +
-                              '        <option value="cloud" data-class="cloud">Cloud</option>' +
-                              '        <option value="router" data-class="router">Router</option>' +
-                              '        <option value="switch" data-class="switch">Switch</option>' +
-                              '        <option value="pc" data-class="pc">PC</option>' +
-                              '      </select>' +
-                              '    </div>' +
-                              '  </div>' +
-                              '</fieldset>');
-            var e = createModal(dialogId, res.creationDialog.title, dialogForm, true);
-            parentSelector.append(e);
-        }
-
-        function addDevice(label, type, x, y, callback) {
-            var newDevice = {
-                group: type,
-                x: x,
-                y: y
-            };
-            if (label!="") newDevice['label'] = label;
-            return ptClient.addDevice(newDevice).done(callback);
-        }
-
-        function closeDialog() {
-            dialogSelector.modal('hide');
-        }
-
-        function openDialog(x, y, successfulCreationCallback) {
-            $('.btn-primary', dialogSelector).click(function() {
-                // We could also simply use their IDs...
-                var name = $('input[name="' + html.nameField + '"]', dialogSelector).val().trim();
-                var type = $('select[name="' + html.typeField + '"]', dialogSelector).val();
-                addDevice(name, type, x, y, successfulCreationCallback).always(closeDialog);
-            });
-            $('form', dialogSelector).on('submit', function( event ) { event.preventDefault(); });
-            dialogSelector.modal('show');
-        }
-
-        function createDialog(parentSelector, dialogId) {
-            createDOM(parentSelector, dialogId);
-            dialogSelector = $("#" + dialogId, parentSelector);
-        }
-
-        return {
-            create: createDialog,
-            open: openDialog,
-        };
-    })();
-    // End deviceCreationDialog module
 
     // Module for device modification dialog
     var deviceModificationDialog = (function () {
@@ -1046,11 +1124,13 @@ ptAnywhereWidgets.all = (function () {
                 showMessage(res.session.unavailable);
             });
         } else {
-            var components = loadComponents(settings, true);
-            ptAnywhereWidgets.interactive.init(components);
             ptClient = new ptAnywhere.http.Client(apiURL, function() {
                 showMessage(res.network.notLoaded);
             });
+
+             var components = loadComponents(settings, true);
+            ptAnywhereWidgets.interaction.init(components, ptClient);
+
             ptClient.getNetwork(
                 function(data) {
                     networkMap.update(data);
