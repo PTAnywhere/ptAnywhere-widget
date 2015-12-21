@@ -3,6 +3,117 @@ if (typeof(ptAnywhereWidgets) === 'undefined') {
     var ptAnywhereWidgets = {};
 }
 
+
+/**
+ * HTML structure for widgets.
+ */
+ptAnywhereWidgets.components = (function () {
+
+    var CREATION = 'creationDialog';
+    var MODIFICATION = 'modificationDialog';
+    var LINK = 'linkDialog';
+    var CMD = 'cmdDialog';
+
+    function createComponents(settings) {
+        // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
+        var componentsWrapper = $('<div></div>');
+        $('body').append(componentsWrapper);
+
+        var components = {};
+        /*components[CREATION] = deviceCreationDialog.create(componentsWrapper, 'create-device');
+        components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');
+        components[LINK] = linkDialog.create(componentsWrapper, 'link-devices');*/
+        if (settings.commandLine) {
+            components[CMD] = new cmdDialog.Object(componentsWrapper);
+        }
+        return components;
+    }
+
+    // Module which handles command line
+    var cmdDialog = (function () {
+        function Dialog(parentSelector) {
+            this.selector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
+            var modal = '<div class="modal-dialog" role="document" style="height: 90%;">' +
+                        '  <div class="modal-content" style="height: 100%;">' +
+                        '    <div class="modal-header" style="height: 10%;">' +
+                        '      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                        '      <h4 class="modal-title" id="cmdModal">' + res.commandLineDialog.title + '</h4>' +
+                        '    </div>' +
+                        '    <div class="modal-body" style="height: 89%;">' +
+                        '    </div>' +
+                        '  </div>' +
+                        '</div>';
+            this.selector.append(modal);
+            parentSelector.append(this.selector);
+        }
+
+        Dialog.prototype.setBody = function(htmlSnippet) {
+            $('.modal-body', this.selector).html(htmlSnippet);
+        };
+
+        Dialog.prototype.open = function() {
+            this.selector.modal('show');
+        };
+
+        return {
+            Object: Dialog
+        };
+    })();  // End commandLine module
+
+    // exposed functions and classes
+    return {
+        create: createComponents,
+        CREATION_DIALOG: CREATION,
+        MODIFICATION_DIALOG: MODIFICATION,
+        LINK_DIALOG: LINK,
+        CMD_DIALOG: CMD,
+    };
+})();
+
+
+/**
+ * The interactive part of the widgets.
+ */
+ptAnywhereWidgets.interactive = (function () {
+
+    function init(components) {
+        if ( components.hasOwnProperty(ptAnywhereWidgets.components.CMD_DIALOG) ) {
+            commandLine.init(components[ptAnywhereWidgets.components.CMD_DIALOG]);
+        }
+    }
+
+    // Module which handles command line
+    var commandLine = (function () {
+        var cmdDialog;
+
+        function init(cmdDialogObject) {
+            cmdDialog = cmdDialogObject;
+        }
+
+        function openIFrame(node) {
+            cmdDialog.setBody(
+                '<div class="iframeWrapper">' +
+                '   <iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe>' +
+                '</div>'
+            );
+            cmdDialog.open();
+        }
+
+        return {
+            init: init,
+            open: openIFrame,
+        };
+    })();  // End commandLine module
+
+    // exposed functions and classes
+    return {
+        init: init,
+        commandLine: commandLine,
+    };
+})();
+
+
+
 /**
  * Widget creator module and its submodules
  */
@@ -69,45 +180,7 @@ ptAnywhereWidgets.all = (function () {
     function hidePrimaryButton(dialogSelector) {
         $('.btn-primary', dialogSelector).hide();
     }
-
     // End: utility functions
-
-    // Module which handles command line
-    var commandLine = (function () {
-
-        var dialogSelector;
-
-        function createDOM(parentSelector) {
-            dialogSelector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
-            var modal = '<div class="modal-dialog" role="document" style="height: 90%;">' +
-                        '  <div class="modal-content" style="height: 100%;">' +
-                        '    <div class="modal-header" style="height: 10%;">' +
-                        '      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
-                        '      <h4 class="modal-title" id="cmdModal">' + res.commandLineDialog.title + '</h4>' +
-                        '    </div>' +
-                        '    <div class="modal-body" style="height: 89%;">' +
-                        '    </div>' +
-                        '  </div>' +
-                        '</div>';
-            dialogSelector.append(modal);
-            parentSelector.append(dialogSelector);
-        }
-
-        function openIFrame(node) {
-            $('.modal-body', dialogSelector).html(
-                '<div class="iframeWrapper">' +
-                '   <iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe>' +
-                '</div>');
-            dialogSelector.modal('show');
-        }
-
-        // Reveal public pointers to
-        // private functions and properties
-        return {
-            init: createDOM,
-            open: openIFrame,
-        };
-    })();  // End commandLine module
 
     // Class for draggable device creation
     function DraggableDevice(el, canvasEl, deviceType) {
@@ -350,7 +423,7 @@ ptAnywhereWidgets.all = (function () {
                     network.on('doubleClick', function() {
                         var selected = getSelectedNode();
                         if (selected!=null)
-                            commandLine.open(selected);
+                            ptAnywhereWidgets.interactive.commandLine.open(selected);
                     });
                 }
             }
@@ -446,6 +519,11 @@ ptAnywhereWidgets.all = (function () {
             $('#' + html.idLoadingMessage, containerSelector).text(errorMsg);
         }
 
+        // For instrumented widgets:
+        function getById(deviceId) {
+            return nodes.get(deviceId)
+        }
+
         // Reveal public pointers to
         // private functions and properties
        return {
@@ -457,6 +535,8 @@ ptAnywhereWidgets.all = (function () {
             disconnect: disconnect,
             getCoordinate: toNetworkMapCoordinate,
             error: showError,
+            // Methods that allow instrumentation
+            get: getById,
        };
 
     })();
@@ -861,6 +941,7 @@ ptAnywhereWidgets.all = (function () {
         function createDialog(parentSelector, dialogId) {
             createDOM(parentSelector, dialogId);
             dialogSelector = $('#' + dialogId, parentSelector);
+            return dialogSelector;
         }
 
         return {
@@ -922,17 +1003,7 @@ ptAnywhereWidgets.all = (function () {
         widgetSelector.append(netSelector);
         var creationMenu = dragAndDropDeviceMenu.create(widgetSelector, netSelector);
         widgetSelector.append(creationMenu);
-
-        // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
-        var visibleComponentContents = $('<div></div>');
-        $('body').append(visibleComponentContents);
-
-        deviceCreationDialog.create(visibleComponentContents, 'create-device');
-        deviceModificationDialog.create(visibleComponentContents, 'modify-device');
-        linkDialog.create(visibleComponentContents, 'link-devices');
-        if (settings.commandLine) {
-            commandLine.init(visibleComponentContents);
-        }
+        return ptAnywhereWidgets.components.create(settings);
     }
 
     function addSlashIfNeeded(url) {
@@ -975,7 +1046,8 @@ ptAnywhereWidgets.all = (function () {
                 showMessage(res.session.unavailable);
             });
         } else {
-            loadComponents(settings, true);
+            var components = loadComponents(settings, true);
+            ptAnywhereWidgets.interactive.init(components);
             ptClient = new ptAnywhere.http.Client(apiURL, function() {
                 showMessage(res.network.notLoaded);
             });
@@ -1002,13 +1074,14 @@ ptAnywhereWidgets.all = (function () {
     // Widget configurator/initializer
     function initNonInteractive(selector, pathToStatics, networkData, customSettings) {
         var settings = init(selector, pathToStatics, customSettings);
-        loadComponents(settings, false);
+        var components = loadComponents(settings, false);
         networkMap.update(networkData);
         return {  // Controls to programatically modify the module
             addDevice: networkMap.addNode,
             removeDevice: networkMap.removeNode,
             connect: networkMap.connect,
             disconnect: networkMap.disconnect,
+            components: instrumented,
             reset: function() { networkMap.update(networkData); },
         };
     }
