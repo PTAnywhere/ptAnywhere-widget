@@ -22,8 +22,8 @@ ptAnywhereWidgets.components = (function () {
 
         var components = {};
         components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device');
-        /*components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');
-        components[LINK] = linkDialog.create(componentsWrapper, 'link-devices');*/
+        /*components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');*/
+        components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices');
         if (settings.commandLine) {
             components[CMD] = new cmdDialog.Object(componentsWrapper);
         }
@@ -31,13 +31,16 @@ ptAnywhereWidgets.components = (function () {
     }
 
 
-    // Begin: utility functions
+    // Begin: utility functions/classes
     //  (They are used in many submodules)
     var MODAL = {  // Literals for classes, identifiers or names
         cPrimaryBtn: 'btn-primary',
     };
 
-    function createModal(modalId, modalTitle, modalBody, hasSubmitButton) {
+    /**
+     * Parent modal class.
+     */
+    function Modal(modalId, parentSelector, modalTitle, modalBody, hasSubmitButton) {
         var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
                     '  <div class="modal-dialog" role="document">' +
                     '    <div class="modal-content">' +
@@ -57,16 +60,41 @@ ptAnywhereWidgets.components = (function () {
                     '    </div>' +
                     '  </div>' +
                     '</div>';
-        return modal;
+        parentSelector.append(modal);
+        this.selector = $("#" + modalId, parentSelector);
     }
 
+    Modal.prototype.open = function() {
+        this.selector.modal('show');
+    };
 
-    function showPrimaryButton(dialogSelector) {
-        $('.' + html.cPrimaryBtn, dialogSelector).show();
-    }
+    Modal.prototype.close = function() {
+        this.selector.modal('hide');
+    };
 
-    function hidePrimaryButton(dialogSelector) {
-        $('.' + html.cPrimaryBtn, dialogSelector).hide();
+    Modal.prototype.getPrimaryButton = function() {
+        return $('.' + MODAL.cPrimaryBtn, this.selector);
+    };
+
+
+    /**
+     * @param defaultSelection It can be an int with the number of the option to be selected or a "null" (for any choice).
+     * @return Selected port.
+     */
+    function loadPortsInSelect(ports, selectElement, defaultSelection) {
+        var ret = null;
+        selectElement.html(''); // Remove everything
+        for (var i = 0; i < ports.length; i++) {
+            var portName = ports[i].portName;
+            var portURL = ports[i].url;
+            var htmlAppend = '<option value="' + portURL + '"';
+            if (i == defaultSelection) {
+                htmlAppend += ' selected';
+                ret = ports[i];
+            }
+            selectElement.append(htmlAppend + '>' + portName + '</option>');
+        }
+        return ret;
     }
     // End: utility functions
 
@@ -103,7 +131,7 @@ ptAnywhereWidgets.components = (function () {
     })();  // End cmdDialog module
 
 
-    // Component to embed the creation dialog
+    // Creation dialog component
     var creationDialog = (function () {
 
         var html = {  // Literals for classes, identifiers or names
@@ -134,25 +162,15 @@ ptAnywhereWidgets.components = (function () {
                               '    </div>' +
                               '  </div>' +
                               '</fieldset>');
-            var e = createModal(dialogId, res.creationDialog.title, dialogForm, true);
-            parentSelector.append(e);
-            this.selector = $("#" + dialogId, parentSelector);
-
-            $('form', this.dialogSelector).on('submit', function( event ) { event.preventDefault(); });
+            Modal.call(this, dialogId, parentSelector, res.creationDialog.title, dialogForm, true);
+            //$('form', this.selector).on('submit', function( event ) { event.preventDefault(); });
         }
 
-        Dialog.prototype.open = function() {
-            this.selector.modal('show');
-        };
+        // Inheritance
+        Dialog.prototype = Object.create(Modal.prototype);
+        Dialog.prototype.constructor = Dialog;
 
-        Dialog.prototype.close = function() {
-            this.selector.modal('hide');
-        };
-
-        Dialog.prototype.getPrimaryButton = function() {
-            return $('.' + MODAL.cPrimaryBtn, this.selector);
-        };
-
+        // Own methods
         Dialog.prototype.getDeviceName = function() {
             return $('input[name="' + html.nameField + '"]', this.selector).val().trim();
         };
@@ -165,6 +183,112 @@ ptAnywhereWidgets.components = (function () {
             Object: Dialog
         };
     })();  // End creationDialog module
+
+
+    // Link dialog component
+    var linkDialog = (function () {
+
+        // Literals for classes
+        var clazz = {
+            fromName: 'fromDeviceName',
+            toName: 'toDeviceName',
+            fromInterface: 'linkFromInterface',
+            toInterface: 'linkToInterface',
+            loading: 'loading',
+            loaded: 'loaded',
+            error: 'error',
+            errorMsg: 'error-msg',
+        };
+
+        function Dialog(parentSelector, dialogId) {
+            var dialogForm = $('<form name="link-devices"></form>');
+            dialogForm.append('<div class="' + clazz.loading + '">' + res.loadingInfo + '</div>');
+            dialogForm.append('<div class="' + clazz.loaded + '">' +
+                              '  <p>' + res.linkDialog.select + '</p>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + clazz.fromInterface + '" class="col-md-3 ' + clazz.fromName + '">Device 1</label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select class="form-control ' + clazz.fromInterface + '" size="1">' +
+                              '        <option value="loading">' + res.loading + '</option>' +
+                              '       </select>' +
+                              '    </div>' +
+                              '  </div>' +
+                              '  <div class="clearfix form-group">' +
+                              '    <label for="' + clazz.toInterface + '" class="col-md-3 ' + clazz.toName + '">Device 2</label>' +
+                              '    <div class="col-md-9">' +
+                              '      <select class="form-control ' + clazz.toInterface + '" size="1">' +
+                              '        <option value="loading">' + res.loading + '</option>' +
+                              '      </select>' +
+                              '    </div>' +
+                              '  </div>' +
+                              '</div>');
+            dialogForm.append('<div class="' + clazz.error + '">' +
+                              '  <p>' + res.linkDialog.error + '</p>' +
+                              '  <p class="' + clazz.errorMsg + '"></p>' +
+                              '</div>');
+            Modal.call(this, dialogId, parentSelector, res.linkDialog.title, dialogForm, true);
+        }
+
+        // Inheritance
+        Dialog.prototype = Object.create(Modal.prototype);
+        Dialog.prototype.constructor = Dialog;
+
+        // Own methods
+        Dialog.prototype.setFromDevice = function(deviceName) {
+            $('.' + clazz.fromName, this.selector).text(deviceName);
+        };
+
+        Dialog.prototype.setToDevice = function(deviceName) {
+            $('.' + clazz.toName, this.selector).text(deviceName);
+        };
+
+        Dialog.prototype.getFromPortURL = function() {
+            return $('.' + clazz.fromInterface + ' option:selected', this.selector).val();
+        };
+
+        Dialog.prototype.getToPortURL = function() {
+            return $('.' + clazz.toInterface + ' option:selected', this.selector).val();
+        };
+
+        Dialog.prototype.setToPorts = function(ports) {
+            loadPortsInSelect(ports, $('.' + clazz.toInterface, this.selector), null);
+        };
+
+        Dialog.prototype.setFromPorts = function(ports) {
+            loadPortsInSelect(ports, $('.' + clazz.fromInterface, this.selector), null);
+        };
+
+        Dialog.prototype.showLoading = function() {
+            this.showPanel(clazz.loading);
+        };
+
+        Dialog.prototype.showLoaded = function() {
+            this.showPanel(clazz.loaded);
+            this.getPrimaryButton().show();
+        };
+
+        Dialog.prototype.showError = function(errorMessage) {
+            $('.' + clazz.error + ' .' + clazz.errorMsg, this.selector).text(errorMessage);
+            this.showPanel(clazz.error);
+        };
+
+        // Should be private
+        Dialog.prototype.showPanel = function(classToShow) {
+            var classNames = [clazz.loading, clazz.loaded, clazz.error];
+            for (i in classNames) {
+                if (classNames[i]==classToShow) {
+                    $('.' + classNames[i], this.selector).show();
+                } else {
+                    $('.' + classNames[i], this.selector).hide();
+                }
+            }
+        };
+
+
+        return {
+            Object: Dialog
+        };
+    })();  // End linkDialog module
 
 
     // exposed functions and classes
@@ -188,10 +312,12 @@ ptAnywhereWidgets.interaction = (function () {
     function init(components, client) {
         ptClient = client;
         deviceCreation.init(components[ptAnywhereWidgets.components.CREATION_DIALOG]);
+        linkCreation.init(components[ptAnywhereWidgets.components.LINK_DIALOG]);
         if ( components.hasOwnProperty(ptAnywhereWidgets.components.CMD_DIALOG) ) {
             commandLine.init(components[ptAnywhereWidgets.components.CMD_DIALOG]);
         }
     }
+
 
     // Module which handles command line
     var commandLine = (function () {
@@ -255,11 +381,94 @@ ptAnywhereWidgets.interaction = (function () {
     })();  // End deviceCreation module
 
 
+    // Link creation
+    var linkCreation = (function () {
+        var linkDialog = null;
+        var successfulCreationCallback;
+        var oneLoaded = false;
+
+        function init(linkDialogObject) {
+            linkDialog = linkDialogObject;
+        }
+
+        function afterLoadingSuccess(ports, isFrom) {
+            // TODO Right now it returns a null, but it would be much logical to return an empty array.
+            if (ports==null || ports.length==0) {
+                linkDialog.showError('One of the devices you are trying to link has no available interfaces.');
+            } else {
+                if (isFrom) {
+                    linkDialog.setFromPorts(ports);
+                } else {
+                    linkDialog.setToPorts(ports);
+                }
+                if (oneLoaded) { // TODO Check race conditions!
+                    // Success: both loaded!
+                    linkDialog.showLoaded();
+                } else {
+                    oneLoaded = true;
+                }
+            }
+        }
+
+        function afterLoadingError(device, errorData) {
+            if (errorData.status==410) {
+                linkDialog.close(); // session expired, error will be shown replacing the map.
+            } else {
+                linkDialog.showError('Unable to get ' + device.label + ' device\'s ports.');
+            }
+        }
+
+        function loadAvailablePorts(fromDevice, toDevice) {
+            oneLoaded = false;
+            ptClient.getAvailablePorts(fromDevice).
+                      done(function(ports) {
+                          afterLoadingSuccess(ports, true);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(fromDevice, errorData);
+                      });
+            ptClient.getAvailablePorts(toDevice).
+                      done(function(ports) {
+                          afterLoadingSuccess(ports, false);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(toDevice, errorData);
+                      });
+        }
+
+        function openDialog(fromDevice, toDevice, callback) {
+            successfulCreationCallback = callback;
+            linkDialog.showLoading();
+
+            linkDialog.setFromDevice(fromDevice.label);
+            linkDialog.setToDevice(toDevice.label);
+
+            linkDialog.getPrimaryButton().hide();
+            linkDialog.open();
+            linkDialog.getPrimaryButton().click(function() {
+                ptClient.createLink(linkDialog.getFromPortURL(),
+                                    linkDialog.getToPortURL()).
+                           done(successfulCreationCallback).
+                           always(function() {
+                               linkDialog.close();
+                           });
+            });
+            loadAvailablePorts(fromDevice, toDevice);
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End linkCreation module
+
+
     // exposed functions and classes
     return {
         init: init,
         commandLine: commandLine,
         deviceCreation: deviceCreation,
+        linkCreation: linkCreation,
     };
 })();
 
@@ -276,62 +485,6 @@ ptAnywhereWidgets.all = (function () {
     var ptClient;  // JS client of the HTTP API
     var staticsPath;
 
-
-    // Begin: utility functions
-    //  (They are used in many submodules)
-
-    /**
-     * @param defaultSelection It can be an int with the number of the option to be selected or a "null" (for any choice).
-     * @return Selected port.
-     */
-    function loadPortsInSelect(ports, selectElement, defaultSelection) {
-        var ret = null;
-        selectElement.html(''); // Remove everything
-        for (var i = 0; i < ports.length; i++) {
-            var portName = ports[i].portName;
-            var portURL = ports[i].url;
-            var htmlAppend = '<option value="' + portURL + '"';
-            if (i == defaultSelection) {
-                htmlAppend += ' selected';
-                ret = ports[i];
-            }
-            selectElement.append(htmlAppend + '>' + portName + '</option>');
-        }
-        return ret;
-    }
-
-    function createModal(modalId, modalTitle, modalBody, hasSubmitButton) {
-        var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
-                    '  <div class="modal-dialog" role="document">' +
-                    '    <div class="modal-content">' +
-                    '      <div class="modal-header">' +
-                    '        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
-                    '        <h4 class="modal-title" id="' + modalId + 'Label">' + modalTitle + '</h4>' +
-                    '      </div>' +
-                    '      <div class="modal-body">' +
-                    modalBody.html() +
-                    '      </div>' +
-                    '      <div class="modal-footer">' +
-                    '        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>';
-        if (hasSubmitButton) {
-            modal += '        <button type="button" class="btn btn-primary">Submit</button>';
-        }
-        modal +=    '      </div>' +
-                    '    </div>' +
-                    '  </div>' +
-                    '</div>';
-        return modal;
-    }
-
-
-    function showPrimaryButton(dialogSelector) {
-        $('.btn-primary', dialogSelector).show();
-    }
-
-    function hidePrimaryButton(dialogSelector) {
-        $('.btn-primary', dialogSelector).hide();
-    }
-    // End: utility functions
 
     // Class for draggable device creation
     function DraggableDevice(el, canvasEl, deviceType) {
@@ -533,7 +686,7 @@ ptAnywhereWidgets.all = (function () {
                                                                 to: toDevice.id,
                                                             }]);
                                                         };
-                                        linkDialog.open(fromDevice, toDevice, sCallback);
+                                        ptAnywhereWidgets.interaction.linkCreation.start(fromDevice, toDevice, sCallback);
                                     }
                                  },
                         editNode: function(data, callback) {
@@ -556,9 +709,8 @@ ptAnywhereWidgets.all = (function () {
                         deleteEdge: function(data, callback) {
                                         if (isInteractive) {
                                             // Always (data.nodes.length==0) && (data.edges.length>0)
-                                            // FIXME There might be more than an edge selected...
-                                            var edgeId = data.edges[0]; // Var created just to enhance readability
-                                            ptClient.removeLink( edges.get(edgeId).url );
+                                            // TODO There might be more than an edge selected...
+                                            ptClient.removeLink( edges.get(data.edges[0]) );
                                             // This callback is important, otherwise it received 3 consecutive onDelete events.
                                             callback(data);
                                         }
@@ -693,150 +845,6 @@ ptAnywhereWidgets.all = (function () {
     })();
     // End networkMap module
 
-    // Dialog for link creation
-    var linkDialog = (function () {  // closure
-
-        var dialogSelector = null;
-        var fromDevice = null, toDevice = null;
-        var successfulCreationCallback;
-        var oneLoaded = false;
-
-        // Literals for classes
-        var clazz = {
-            fromName: 'fromDeviceName',
-            toName: 'toDeviceName',
-            fromInterface: 'linkFromInterface',
-            toInterface: 'linkToInterface',
-            loading: 'loading',
-            loaded: 'loaded',
-            error: 'error',
-            errorMsg: 'error-msg',
-        };
-
-
-        function createDOM(parentSelector, dialogId) {
-            var dialogForm = $('<form name="link-devices"></form>');
-            dialogForm.append('<div class="' + clazz.loading + '">' + res.loadingInfo + '</div>');
-            dialogForm.append('<div class="' + clazz.loaded + '">' +
-                              '  <p>' + res.linkDialog.select + '</p>' +
-                              '  <div class="clearfix form-group">' +
-                              '    <label for="' + clazz.fromInterface + '" class="col-md-3 ' + clazz.fromName + '">Device 1</label>' +
-                              '    <div class="col-md-9">' +
-                              '      <select class="form-control ' + clazz.fromInterface + '" size="1">' +
-                              '        <option value="loading">' + res.loading + '</option>' +
-                              '       </select>' +
-                              '    </div>' +
-                              '  </div>' +
-                              '  <div class="clearfix form-group">' +
-                              '    <label for="' + clazz.toInterface + '" class="col-md-3 ' + clazz.toName + '">Device 2</label>' +
-                              '    <div class="col-md-9">' +
-                              '      <select class="form-control ' + clazz.toInterface + '" size="1">' +
-                              '        <option value="loading">' + res.loading + '</option>' +
-                              '      </select>' +
-                              '    </div>' +
-                              '  </div>' +
-                              '</div>');
-            dialogForm.append('<div class="' + clazz.error + '">' +
-                              '  <p>' + res.linkDialog.error + '</p>' +
-                              '  <p class="' + clazz.errorMsg + '"></p>' +
-                              '</div>');
-            var e = createModal(dialogId, res.linkDialog.title, dialogForm, true);
-            parentSelector.append(e);
-        }
-
-        function showPanel(classToShow) {
-            var classNames = [clazz.loading, clazz.loaded, clazz.error];
-            for (i in classNames) {
-                if (classNames[i]==classToShow) {
-                    $('.' + classNames[i], dialogSelector).show();
-                } else {
-                    $('.' + classNames[i], dialogSelector).hide();
-                }
-            }
-        }
-
-        function showErrorInPanel(errorMessage) {
-            $('.' + clazz.error + ' .' + clazz.errorMsg, dialogSelector).text(errorMessage);
-            showPanel(clazz.error);
-        }
-
-        function afterLoadingSuccess(ports, isFrom) {
-            // TODO Right now it returns a null, but it would be much logical to return an empty array.
-            if (ports==null || ports.length==0) {
-                showErrorInPanel('One of the devices you are trying to link has no available interfaces.');
-            } else {
-                var selectPortsEl = $((isFrom)? '.' + clazz.fromInterface : '.' + clazz.toInterface, dialogSelector);
-                loadPortsInSelect(ports, selectPortsEl, null);
-                if (oneLoaded) { // TODO Check race conditions!
-                    // Success: both loaded!
-                    showPanel(clazz.loaded);
-                    showPrimaryButton(dialogSelector);
-                } else {
-                    oneLoaded = true;
-                }
-            }
-        }
-
-        function afterLoadingError(device, errorData) {
-            if (errorData.status==410) {
-                dialogSelector.modal('hide'); // session expired, error will be shown replacing the map.
-            } else {
-                showErrorInPanel('Unable to get ' + device.label + ' device\'s ports.');
-            }
-        }
-
-        function loadAvailablePorts() {
-            oneLoaded = false;
-            ptClient.getAvailablePorts(fromDevice).
-                      done(function(ports) {
-                          afterLoadingSuccess(ports, true);
-                      }).
-                      fail(function(errorData) {
-                          afterLoadingError(fromDevice, errorData);
-                      });
-            ptClient.getAvailablePorts(toDevice).
-                      done(function(ports) {
-                          afterLoadingSuccess(ports, false);
-                      }).
-                      fail(function(errorData) {
-                          afterLoadingError(toDevice, errorData);
-                      });
-        }
-
-        function openDialog(fromD, toD, callback) {
-            fromDevice = fromD;
-            toDevice = toD;
-            successfulCreationCallback = callback;
-            showPanel(clazz.loading);
-
-            $('.' + clazz.fromName, dialogSelector).text(fromDevice.label);
-            $('.' + clazz.toName, dialogSelector).text(toDevice.label);
-
-            hidePrimaryButton(dialogSelector);
-            dialogSelector.modal('show');
-            $('.btn-primary', dialogSelector).click(function() {
-                var fromPortURL = $('.' + clazz.fromInterface + ' option:selected', dialogSelector).val();
-                var toPortURL = $('.' + clazz.toInterface + ' option:selected', dialogSelector).val();
-                ptClient.createLink(fromPortURL, toPortURL).
-                           done(successfulCreationCallback).
-                           always(function() {
-                               dialogSelector.modal('hide');
-                           });
-            });
-            loadAvailablePorts();
-        }
-
-        function createDialog(parentSelector, dialogId) {
-            createDOM(parentSelector, dialogId);
-            dialogSelector = $('#' + dialogId, parentSelector);
-        }
-
-        return {
-            create: createDialog,
-            open: openDialog,
-        };
-    })();
-    // End linkDialog module
 
     // Module for device modification dialog
     var deviceModificationDialog = (function () {
