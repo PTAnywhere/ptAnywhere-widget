@@ -5,9 +5,9 @@ if (typeof(ptAnywhereWidgets) === 'undefined') {
 
 
 /**
- * HTML structure for widgets.
+ * HTML structure for the dialogs used in the widget.
  */
-ptAnywhereWidgets.components = (function () {
+ptAnywhereWidgets.dialogs = (function () {
 
     var CREATION = 'creationDialog';
     var MODIFICATION = 'modificationDialog';
@@ -475,8 +475,6 @@ ptAnywhereWidgets.components = (function () {
     })();  // End deviceModification module
 
 
-
-    // exposed functions and classes
     return {
         create: createComponents,
         CREATION_DIALOG: CREATION,
@@ -487,286 +485,86 @@ ptAnywhereWidgets.components = (function () {
 })();
 
 
+
 /**
- * The interactive part of the widgets.
+ * HTML structure for the widget.
  */
-ptAnywhereWidgets.interaction = (function () {
+ptAnywhereWidgets.main = (function () {
+    var widgetSelector = null;
+    var staticsPath = null;
+    var ptClient;  // JS client of the HTTP API
+    var staticsPath;
 
-    var ptClient;
+    var draggableElements = [
+        {element: 'cloud', icon: 'cloud.png', caption: 'Cloud'},
+        {element: 'router', icon: 'router.png', caption: 'Router'},
+        {element: 'switch', icon: 'switch.png', caption: 'Switch'},
+        {element: 'pc', icon: 'pc.png', caption: 'Pc'},
+    ];
 
-    function init(components, client) {
+    // Before the components are created, an error message can be shown...
+    function init(selector) {
+        widgetSelector = $(selector);
+    }
+
+    /* Public component creator */
+    function createComponents(pathToStatics, settings, client) {
+        staticsPath = addSlashIfNeeded(pathToStatics);
         ptClient = client;
-        deviceCreation.init(components[ptAnywhereWidgets.components.CREATION_DIALOG]);
-        deviceModification.init(components[ptAnywhereWidgets.components.MODIFICATION_DIALOG]);
-        linkCreation.init(components[ptAnywhereWidgets.components.LINK_DIALOG]);
-        if ( components.hasOwnProperty(ptAnywhereWidgets.components.CMD_DIALOG) ) {
-            commandLine.init(components[ptAnywhereWidgets.components.CMD_DIALOG]);
+        var isInteractive = ptClient!=null;
+
+
+        var netSelector = networkMap.create(isInteractive);  // Always loaded
+        var creationMenu = new CreationMenu();
+        widgetSelector.append(netSelector);
+        widgetSelector.append(creationMenu.selector);
+
+        if (isInteractive) {
+            for (var i in draggableElements) {
+                var el = draggableElements[i];
+                new DraggableDevice($('.' + el.element, creationMenu.selector), netSelector, el.element);
+            }
         }
     }
 
+    function addSlashIfNeeded(url) {
+      if (url.indexOf('/', this.length - 1) === -1 ) {
+        return url + '/';
+      }
+      return url;
+    }
 
-    // Module which handles command line
-    var commandLine = (function () {
-        var cmdDialog;
+    /* Show message */
+    function showMessage(msg) {
+        widgetSelector.html('<div class="row message">' +
+                            '  <div class="col-md-8 col-md-offset-2 text-center">' +
+                            '    <h1>' + msg.title + '</h1>' + msg.content +
+                            '  </div>' +
+                            '</div>');
+    }
 
-        function init(cmdDialogObject) {
-            cmdDialog = cmdDialogObject;
+    /* Class for drag and drop device menu */
+    function CreationMenu() {
+        var fieldset = $('<fieldset></fieldset>');
+        fieldset.tooltip({title: res.creationMenu.legend});
+        var rowHolder = $('<div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12"></div>');
+        var figuresHolder = $('<div class="row"></div>');
+        for (var i in draggableElements) {
+            figuresHolder.append(this.getFigureDOM(draggableElements[i]));
         }
+        rowHolder.append(figuresHolder);
+        fieldset.append(rowHolder);
+        this.selector = $('<div class="creation-menu"></div>');
+        this.selector.append(fieldset);
+    }
 
-        function openIFrame(node) {
-            cmdDialog.setBody(
-                '<div class="iframeWrapper">' +
-                '   <iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe>' +
-                '</div>'
-            );
-            cmdDialog.open();
-        }
-
-        return {
-            init: init,
-            start: openIFrame,
-        };
-    })();  // End commandLine module
-
-
-    // Module for device creation
-    var deviceCreation = (function () {
-        var creationDialog;
-
-        function init(creationDialogObject) {
-            creationDialog = creationDialogObject;
-        }
-
-        function addDevice(label, type, x, y, callback) {
-            var newDevice = {
-                group: type,
-                x: x,
-                y: y
-            };
-            if (label!="") newDevice['label'] = label;
-            return ptClient.addDevice(newDevice).done(callback);
-        }
-
-        function openDialog(x, y, successfulCreationCallback) {
-            creationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
-            creationDialog.getPrimaryButton().click(function() {
-                // We could also simply use their IDs...
-                var name = creationDialog.getDeviceName();
-                var type = creationDialog.getDeviceType();
-                addDevice(name, type, x, y, successfulCreationCallback).
-                    always(function() {
-                        creationDialog.close();
-                    });
-            });
-            creationDialog.open();
-        }
-
-        return {
-            init: init,
-            start: openDialog,
-        };
-    })();  // End deviceCreation module
-
-
-    // Link creation
-    var linkCreation = (function () {
-        var linkDialog = null;
-        var successfulCreationCallback;
-        var oneLoaded = false;
-
-        function init(linkDialogObject) {
-            linkDialog = linkDialogObject;
-        }
-
-        function afterLoadingSuccess(ports, isFrom) {
-            // TODO Right now it returns a null, but it would be much logical to return an empty array.
-            if (ports==null || ports.length==0) {
-                linkDialog.showError('One of the devices you are trying to link has no available interfaces.');
-            } else {
-                if (isFrom) {
-                    linkDialog.setFromPorts(ports);
-                } else {
-                    linkDialog.setToPorts(ports);
-                }
-                if (oneLoaded) { // TODO Check race conditions!
-                    // Success: both loaded!
-                    linkDialog.showLoaded();
-                } else {
-                    oneLoaded = true;
-                }
-            }
-        }
-
-        function afterLoadingError(device, errorData) {
-            if (errorData.status==410) {
-                linkDialog.close(); // session expired, error will be shown replacing the map.
-            } else {
-                linkDialog.showError('Unable to get ' + device.label + ' device\'s ports.');
-            }
-        }
-
-        function loadAvailablePorts(fromDevice, toDevice) {
-            oneLoaded = false;
-            ptClient.getAvailablePorts(fromDevice).
-                      done(function(ports) {
-                          afterLoadingSuccess(ports, true);
-                      }).
-                      fail(function(errorData) {
-                          afterLoadingError(fromDevice, errorData);
-                      });
-            ptClient.getAvailablePorts(toDevice).
-                      done(function(ports) {
-                          afterLoadingSuccess(ports, false);
-                      }).
-                      fail(function(errorData) {
-                          afterLoadingError(toDevice, errorData);
-                      });
-        }
-
-        function openDialog(fromDevice, toDevice, callback) {
-            successfulCreationCallback = callback;
-            linkDialog.showLoading();
-
-            linkDialog.setFromDevice(fromDevice.label);
-            linkDialog.setToDevice(toDevice.label);
-
-            linkDialog.getPrimaryButton().hide();
-            linkDialog.open();
-            linkDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
-            linkDialog.getPrimaryButton().click(function() {
-                ptClient.createLink(linkDialog.getFromPortURL(),
-                                    linkDialog.getToPortURL()).
-                           done(successfulCreationCallback).
-                           always(function() {
-                               linkDialog.close();
-                           });
-            });
-            loadAvailablePorts(fromDevice, toDevice);
-        }
-
-        return {
-            init: init,
-            start: openDialog,
-        };
-    })();  // End linkCreation module
-
-    // Module for device modification
-    var deviceModification = (function () {
-        var modificationDialog = null;
-        var selectedDevice;
-
-        function init(modificationDialogObject) {
-            modificationDialog = modificationDialogObject;
-        }
-
-        function updateInterfaceInformation(port) {
-            if (port.hasOwnProperty('portIpAddress') && port.hasOwnProperty('portSubnetMask')) {
-                modificationDialog.setPortIpAddress(port.portIpAddress);
-                modificationDialog.setPortSubnetMask(port.portSubnetMask);
-                modificationDialog.showIFaceDetails();
-            } else {
-                modificationDialog.hideIFaceDetails();
-            }
-        }
-
-        function loadPortsForInterface(ports) {
-            var selectedPort = modificationDialog.setPorts(ports);
-            if (selectedPort!=null) {
-                updateInterfaceInformation(selectedPort);
-                modificationDialog.showLoading();
-            }
-            modificationDialog.getPortSelect().unbind();  // To avoid accumulation of change listeners from other calls
-            modificationDialog.getPortSelect().change(function () {
-                $('option:selected', this).each(function(index, element) { // There is only one selection
-                    var selectedIFace = $(element).text();
-                    for (var i = 0; i < ports.length; i++) {  // Instead of getting its info again (we save one request)
-                        if ( selectedIFace == ports[i].portName ) {
-                            updateInterfaceInformation(ports[i]);
-                            break;
-                        }
-                    }
-                });
-            });
-        }
-
-        function updateEditForm() {
-            modificationDialog.showLoaded();
-
-            modificationDialog.setDeviceName(selectedDevice.label);
-            if (selectedDevice.hasOwnProperty('defaultGateway')) {
-                modificationDialog.setDefaultGateway(selectedDevice.defaultGateway);
-            } else {
-                modificationDialog.setDefaultGateway(null);
-            }
-
-            ptClient.getAllPorts(selectedDevice).
-                      done(loadPortsForInterface).
-                      fail(function() {
-                        modificationDialog.close();
-                      });
-        }
-
-        function handleModificationSubmit(successCallback, alwaysCallback) {
-            var selectedTab = modificationDialog.getSelectedTab();
-            if (selectedTab==1) { // General settings
-                var deviceLabel = modificationDialog.getDeviceName();
-                var defaultGateway = modificationDialog.getDefaultGateway();
-                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway).
-                                done(successCallback).
-                                always(alwaysCallback);
-            } else if (selectedTab==2) { // Interfaces
-                var portURL = modificationDialog.getSelectedPortUrl();
-                var portIpAddress = modificationDialog.getPortIpAddress();
-                var portSubnetMask = modificationDialog.getPortSubnetMask();
-                // Room for improvement: the following request could be avoided when nothing has changed
-                // In case just the port details are modified...
-                return ptClient.modifyPort(portURL, portIpAddress, portSubnetMask).always(alwaysCallback);
-            } else {
-                console.error('ERROR. Unknown selected tab: ' + selectedTab + '.');
-            }
-        }
-
-        function openDialog(deviceToModify, successfulNodeModificationCallback) {
-            selectedDevice = deviceToModify;
-            updateEditForm();
-            modificationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
-            modificationDialog.getPrimaryButton().click(function() {
-                handleModificationSubmit(successfulNodeModificationCallback, function() {
-                    modificationDialog.close();
-                });
-            });
-            modificationDialog.open();
-        }
-
-        return {
-            init: init,
-            start: openDialog,
-        };
-    })();  // End deviceModification module
-
-
-    // exposed functions and classes
-    return {
-        init: init,
-        commandLine: commandLine,
-        deviceCreation: deviceCreation,
-        linkCreation: linkCreation,
-        deviceModification: deviceModification,
+    CreationMenu.prototype.getFigureDOM = function(draggableElement) {
+        return '<figure class="col-md-3 col-sm-3 col-xs-3 text-center"><img class="' + draggableElement.element + '" alt="' +
+               draggableElement.element + '" ' + 'src="' + staticsPath +
+               draggableElement.icon + '"><figcaption>' +
+               draggableElement.caption + '</figcaption></figure>';
     };
-})();
-
-
-
-/**
- * Widget creator module and its submodules
- */
-// The Revealing Module Pattern
-// http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
-ptAnywhereWidgets.all = (function () {
-
-    var widgetSelector;
-    var ptClient;  // JS client of the HTTP API
-    var staticsPath;
+    // End CreationMenu class
 
 
     // Class for draggable device creation
@@ -864,6 +662,7 @@ ptAnywhereWidgets.all = (function () {
                 });
     };
     // End DraggableDevice class
+
 
     // Module for creating device network map
     var networkMap = (function () {
@@ -1128,71 +927,292 @@ ptAnywhereWidgets.all = (function () {
     })();
     // End networkMap module
 
-    // Module for device drag-and-drop creation menu
-    var dragAndDropDeviceMenu = (function () {
-        var menuSelector;
-        var draggableElements = [
-            { element: 'cloud', icon: 'cloud.png', caption: 'Cloud'},
-            { element: 'router', icon: 'router.png', caption: 'Router'},
-            { element: 'switch', icon: 'switch.png', caption: 'Switch'},
-            { element: 'pc', icon: 'pc.png', caption: 'Pc'},
-        ];
 
-        function getFigureDOM(draggableElement) {
-            return '<figure class="col-md-3 col-sm-3 col-xs-3 text-center"><img class="' + draggableElement.element + '" alt="' +
-                   draggableElement.element + '" ' + 'src="' + staticsPath +
-                   draggableElement.icon + '"><figcaption>' +
-                   draggableElement.caption + '</figcaption></figure>';
+    return {
+        init: init,
+        create: createComponents,
+        show: showMessage,
+        update: networkMap.update,
+    };
+})();
+
+/**
+ * The interactive part of the widgets.
+ */
+ptAnywhereWidgets.interaction = (function () {
+    var ptClient;
+
+    function init(dialogs, client) {
+        ptClient = client;
+        deviceCreation.init(dialogs[ptAnywhereWidgets.dialogs.CREATION_DIALOG]);
+        deviceModification.init(dialogs[ptAnywhereWidgets.dialogs.MODIFICATION_DIALOG]);
+        linkCreation.init(dialogs[ptAnywhereWidgets.dialogs.LINK_DIALOG]);
+        if ( dialogs.hasOwnProperty(ptAnywhereWidgets.dialogs.CMD_DIALOG) ) {
+            commandLine.init(dialogs[ptAnywhereWidgets.dialogs.CMD_DIALOG]);
+        }
+    }
+
+
+    // Module which handles command line
+    var commandLine = (function () {
+        var cmdDialog;
+
+        function init(cmdDialogObject) {
+            cmdDialog = cmdDialogObject;
         }
 
-        function createDOM() {
-            var fieldset = $('<fieldset></fieldset>');
-            fieldset.tooltip({title: res.creationMenu.legend});
-            var rowHolder = $('<div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12"></div>');
-            var figuresHolder = $('<div class="row"></div>');
-            for (var i in draggableElements) {
-                figuresHolder.append(getFigureDOM(draggableElements[i]));
-            }
-            rowHolder.append(figuresHolder);
-            fieldset.append(rowHolder);
-            var menu = $('<div class="creation-menu"></div>');
-            menu.append(fieldset);
-            return menu;
-        }
-
-        function createMenu(parentSelector, dragToCanvas) {
-            menuSelector = createDOM();
-            for (var i in draggableElements) {
-                var el = draggableElements[i];
-                new DraggableDevice($('.' + el.element, menuSelector), dragToCanvas, el.element);
-            }
-            return menuSelector;
+        function openIFrame(node) {
+            cmdDialog.setBody(
+                '<div class="iframeWrapper">' +
+                '   <iframe class="terminal" src="console?endpoint=' + node.consoleEndpoint + '"></iframe>' +
+                '</div>'
+            );
+            cmdDialog.open();
         }
 
         return {
-            create: createMenu
+            init: init,
+            start: openIFrame,
         };
-    })();
-    // End deviceModificationDialog module
+    })();  // End commandLine module
 
-    function loadComponents(settings, isInteractive) {
-        var netSelector = networkMap.create(isInteractive);  // Always loaded
-        widgetSelector.append(netSelector);
-        var creationMenu = dragAndDropDeviceMenu.create(widgetSelector, netSelector);
-        widgetSelector.append(creationMenu);
-        return ptAnywhereWidgets.components.create(settings);
-    }
 
-    function addSlashIfNeeded(url) {
-      if (url.indexOf('/', this.length - 1) === -1 ) {
-        return url + '/';
-      }
-      return url;
-    }
+    // Module for device creation
+    var deviceCreation = (function () {
+        var creationDialog;
 
-    function init(selector, pathToStatics, customSettings) {
-        widgetSelector = $(selector);
-        staticsPath = addSlashIfNeeded(pathToStatics);
+        function init(creationDialogObject) {
+            creationDialog = creationDialogObject;
+        }
+
+        function addDevice(label, type, x, y, callback) {
+            var newDevice = {
+                group: type,
+                x: x,
+                y: y
+            };
+            if (label!="") newDevice['label'] = label;
+            return ptClient.addDevice(newDevice).done(callback);
+        }
+
+        function openDialog(x, y, successfulCreationCallback) {
+            creationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
+            creationDialog.getPrimaryButton().click(function() {
+                // We could also simply use their IDs...
+                var name = creationDialog.getDeviceName();
+                var type = creationDialog.getDeviceType();
+                addDevice(name, type, x, y, successfulCreationCallback).
+                    always(function() {
+                        creationDialog.close();
+                    });
+            });
+            creationDialog.open();
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End deviceCreation module
+
+
+    // Link creation
+    var linkCreation = (function () {
+        var linkDialog = null;
+        var successfulCreationCallback;
+        var oneLoaded = false;
+
+        function init(linkDialogObject) {
+            linkDialog = linkDialogObject;
+        }
+
+        function afterLoadingSuccess(ports, isFrom) {
+            // TODO Right now it returns a null, but it would be much logical to return an empty array.
+            if (ports==null || ports.length==0) {
+                linkDialog.showError('One of the devices you are trying to link has no available interfaces.');
+            } else {
+                if (isFrom) {
+                    linkDialog.setFromPorts(ports);
+                } else {
+                    linkDialog.setToPorts(ports);
+                }
+                if (oneLoaded) { // TODO Check race conditions!
+                    // Success: both loaded!
+                    linkDialog.showLoaded();
+                } else {
+                    oneLoaded = true;
+                }
+            }
+        }
+
+        function afterLoadingError(device, errorData) {
+            if (errorData.status==410) {
+                linkDialog.close(); // session expired, error will be shown replacing the map.
+            } else {
+                linkDialog.showError('Unable to get ' + device.label + ' device\'s ports.');
+            }
+        }
+
+        function loadAvailablePorts(fromDevice, toDevice) {
+            oneLoaded = false;
+            ptClient.getAvailablePorts(fromDevice).
+                      done(function(ports) {
+                          afterLoadingSuccess(ports, true);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(fromDevice, errorData);
+                      });
+            ptClient.getAvailablePorts(toDevice).
+                      done(function(ports) {
+                          afterLoadingSuccess(ports, false);
+                      }).
+                      fail(function(errorData) {
+                          afterLoadingError(toDevice, errorData);
+                      });
+        }
+
+        function openDialog(fromDevice, toDevice, callback) {
+            successfulCreationCallback = callback;
+            linkDialog.showLoading();
+
+            linkDialog.setFromDevice(fromDevice.label);
+            linkDialog.setToDevice(toDevice.label);
+
+            linkDialog.getPrimaryButton().hide();
+            linkDialog.open();
+            linkDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
+            linkDialog.getPrimaryButton().click(function() {
+                ptClient.createLink(linkDialog.getFromPortURL(),
+                                    linkDialog.getToPortURL()).
+                           done(successfulCreationCallback).
+                           always(function() {
+                               linkDialog.close();
+                           });
+            });
+            loadAvailablePorts(fromDevice, toDevice);
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End linkCreation module
+
+    // Module for device modification
+    var deviceModification = (function () {
+        var modificationDialog = null;
+        var selectedDevice;
+
+        function init(modificationDialogObject) {
+            modificationDialog = modificationDialogObject;
+        }
+
+        function updateInterfaceInformation(port) {
+            if (port.hasOwnProperty('portIpAddress') && port.hasOwnProperty('portSubnetMask')) {
+                modificationDialog.setPortIpAddress(port.portIpAddress);
+                modificationDialog.setPortSubnetMask(port.portSubnetMask);
+                modificationDialog.showIFaceDetails();
+            } else {
+                modificationDialog.hideIFaceDetails();
+            }
+        }
+
+        function loadPortsForInterface(ports) {
+            var selectedPort = modificationDialog.setPorts(ports);
+            if (selectedPort!=null) {
+                updateInterfaceInformation(selectedPort);
+                modificationDialog.showLoading();
+            }
+            modificationDialog.getPortSelect().unbind();  // To avoid accumulation of change listeners from other calls
+            modificationDialog.getPortSelect().change(function () {
+                $('option:selected', this).each(function(index, element) { // There is only one selection
+                    var selectedIFace = $(element).text();
+                    for (var i = 0; i < ports.length; i++) {  // Instead of getting its info again (we save one request)
+                        if ( selectedIFace == ports[i].portName ) {
+                            updateInterfaceInformation(ports[i]);
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateEditForm() {
+            modificationDialog.showLoaded();
+
+            modificationDialog.setDeviceName(selectedDevice.label);
+            if (selectedDevice.hasOwnProperty('defaultGateway')) {
+                modificationDialog.setDefaultGateway(selectedDevice.defaultGateway);
+            } else {
+                modificationDialog.setDefaultGateway(null);
+            }
+
+            ptClient.getAllPorts(selectedDevice).
+                      done(loadPortsForInterface).
+                      fail(function() {
+                        modificationDialog.close();
+                      });
+        }
+
+        function handleModificationSubmit(successCallback, alwaysCallback) {
+            var selectedTab = modificationDialog.getSelectedTab();
+            if (selectedTab==1) { // General settings
+                var deviceLabel = modificationDialog.getDeviceName();
+                var defaultGateway = modificationDialog.getDefaultGateway();
+                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway).
+                                done(successCallback).
+                                always(alwaysCallback);
+            } else if (selectedTab==2) { // Interfaces
+                var portURL = modificationDialog.getSelectedPortUrl();
+                var portIpAddress = modificationDialog.getPortIpAddress();
+                var portSubnetMask = modificationDialog.getPortSubnetMask();
+                // Room for improvement: the following request could be avoided when nothing has changed
+                // In case just the port details are modified...
+                return ptClient.modifyPort(portURL, portIpAddress, portSubnetMask).always(alwaysCallback);
+            } else {
+                console.error('ERROR. Unknown selected tab: ' + selectedTab + '.');
+            }
+        }
+
+        function openDialog(deviceToModify, successfulNodeModificationCallback) {
+            selectedDevice = deviceToModify;
+            updateEditForm();
+            modificationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
+            modificationDialog.getPrimaryButton().click(function() {
+                handleModificationSubmit(successfulNodeModificationCallback, function() {
+                    modificationDialog.close();
+                });
+            });
+            modificationDialog.open();
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End deviceModification module
+
+
+    // exposed functions and classes
+    return {
+        init: init,
+        commandLine: commandLine,
+        deviceCreation: deviceCreation,
+        linkCreation: linkCreation,
+        deviceModification: deviceModification,
+    };
+})();
+
+
+
+/**
+ * Widget creator module and its submodules
+ */
+// The Revealing Module Pattern
+// http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
+ptAnywhereWidgets.all = (function () {
+
+    function getSettings(customSettings) {
         var settings = { // Default values
             createSession: false,
             fileToOpen: null,
@@ -1202,37 +1222,41 @@ ptAnywhereWidgets.all = (function () {
         return settings;
     }
 
-    function showMessage(msg) {
-        widgetSelector.html('<div class="row message">' +
-                            '  <div class="col-md-8 col-md-offset-2 text-center">' +
-                            '    <h1>' + msg.title + '</h1>' + msg.content +
-                            '  </div>' +
-                            '</div>');
+    function loadInteractiveComponents(pathToStatics, settings, ptClient) {
+        ptAnywhereWidgets.main.create(pathToStatics, settings, ptClient);
+        var components = ptAnywhereWidgets.dialogs.create(settings);
+        ptAnywhereWidgets.interaction.init(components, ptClient);
+    }
+
+    function loadSimpleComponents(pathToStatics, settings) {
+        ptAnywhereWidgets.main.create(pathToStatics, settings, null);
+        ptAnywhereWidgets.dialogs.create(settings);
     }
 
     // Widget configurator/initializer
     function initInteractive(selector, apiURL, pathToStatics, customSettings) {
-        var settings = init(selector, pathToStatics, customSettings);
+        var settings = getSettings(customSettings);
+        ptAnywhereWidgets.main.init(selector);
         if (settings.createSession && settings.fileToOpen!=null) {
-            showMessage(res.session.creating);
+            ptAnywhereWidgets.main.show(res.session.creating);
             ptAnywhere.http.newSession(apiURL, settings.fileToOpen, function(newSessionURL) {
                 $.get(newSessionURL, function(sessionId) {
                     window.location.href =  '?session=' + sessionId;
                 });
             }).fail(function(data) {
-                showMessage(res.session.unavailable);
+                ptAnywhereWidgets.main.show(res.session.unavailable);
             });
         } else {
-            ptClient = new ptAnywhere.http.Client(apiURL, function() {
-                showMessage(res.network.notLoaded);
+            // JS client of the HTTP API
+            var ptClient = new ptAnywhere.http.Client(apiURL, function() {
+                ptAnywhereWidgets.main.show(res.network.notLoaded);
             });
 
-             var components = loadComponents(settings, true);
-            ptAnywhereWidgets.interaction.init(components, ptClient);
+            loadInteractiveComponents(pathToStatics, settings, ptClient);
 
             ptClient.getNetwork(
                 function(data) {
-                    networkMap.update(data);
+                    ptAnywhereWidgets.main.update(data);
                 },
                 function(tryCount, maxRetries, errorType) {
                     var errorMessage;
@@ -1252,23 +1276,21 @@ ptAnywhereWidgets.all = (function () {
 
     // Widget configurator/initializer
     function initNonInteractive(selector, pathToStatics, networkData, customSettings) {
-        var settings = init(selector, pathToStatics, customSettings);
-        var components = loadComponents(settings, false);
-        networkMap.update(networkData);
+        var settings = getSettings(customSettings);
+        loadSimpleComponents(pathToStatics, settings);
+        ptAnywhereWidgets.main.update(networkData);
         return {  // Controls to programatically modify the module
             addDevice: networkMap.addNode,
             removeDevice: networkMap.removeNode,
             connect: networkMap.connect,
             disconnect: networkMap.disconnect,
-            components: instrumented,
-            reset: function() { networkMap.update(networkData); },
+            reset: function() { ptAnywhereWidgets.main.update(networkData); },
         };
     }
 
     // exposed functions and classes
     return {
         create: initInteractive,
-        createNonInteractiveWidget: initNonInteractive,
-        DraggableDevice: DraggableDevice,
+        createNonInteractiveWidget: initNonInteractive
     };
 })();
