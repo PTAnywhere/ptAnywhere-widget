@@ -14,7 +14,7 @@ ptAnywhereWidgets.components = (function () {
     var LINK = 'linkDialog';
     var CMD = 'cmdDialog';
 
-
+    /* Public component creator */
     function createComponents(settings) {
         // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
         var componentsWrapper = $('<div></div>');
@@ -22,7 +22,7 @@ ptAnywhereWidgets.components = (function () {
 
         var components = {};
         components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device');
-        /*components[MODIFICATION] = deviceModificationDialog.create(componentsWrapper, 'modify-device');*/
+        components[MODIFICATION] = new deviceModificationDialog.Object(componentsWrapper, 'modify-device');
         components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices');
         if (settings.commandLine) {
             components[CMD] = new cmdDialog.Object(componentsWrapper);
@@ -115,6 +115,11 @@ ptAnywhereWidgets.components = (function () {
                         '</div>';
             this.selector.append(modal);
             parentSelector.append(this.selector);
+            var el = this;
+            this.selector.on('hidden.bs.modal', function (e) {
+                // TODO not destroy and have many hidden modals to not remove previous interactions.
+                el.setBody('');  // To make sure that no iframe is left open after the modal is closed.
+            });
         }
 
         Dialog.prototype.setBody = function(htmlSnippet) {
@@ -291,6 +296,186 @@ ptAnywhereWidgets.components = (function () {
     })();  // End linkDialog module
 
 
+    // Module for device modification
+    var deviceModificationDialog = (function () {
+        var html = {  // Literals for classes, identifiers or names
+            tabs: 'modify-dialog-tabs',
+            tab1: 'tabs-1',
+            tab2: 'tabs-2',
+            nameField: 'displayName',
+            gatewayField: 'defaultGateway',
+            ipField: 'ipAddress',
+            subnetField: 'subnetMask',
+            iFaceSelector: 'interface',
+            cLoading: 'loading',
+            cLoaded: 'loaded',
+            cIFaceDetails: 'iFaceDetails',
+            cNoIFaceDetails: 'noIFaceDetails',
+        };
+
+        function Dialog(parentSelector, dialogId) {
+            var dialogForm = $('<form></form>');
+            dialogForm.append('<ul class="nav nav-tabs" role="tablist">' +
+                              '  <li role="presentation" class="active">' +
+                              '     <a href="#' + html.tab1 + '" aria-controls="' + html.tab1 + '" role="tab" data-toggle="tab">' +
+                              '       ' + res.modificationDialog.globalSettings +
+                              '     </a>' +
+                              '  </li>' +
+                              '  <li role="presentation">' +
+                              '    <a href="#' + html.tab2 + '" aria-controls="' + html.tab2 + '" role="tab" data-toggle="tab">' +
+                              '      ' + res.modificationDialog.interfaces +
+                              '    </a>' +
+                              '  </li>' +
+                              '</ul>' +
+                              '<div class="tab-content">' +
+                              '  <div id="' + html.tab1 + '" role="tabpanel" class="tab-pane active">' +
+                              '    <div class="clearfix form-group">' +
+                              '      <label for="' + dialogId + '-name" class="col-md-3">' + res.name + ': </label>' +
+                              '      <div class="col-md-9">' +
+                              '        <input type="text" name="' + html.nameField + '" id="' + dialogId + '-name" class="form-control">' +
+                              '      </div>' +
+                              '    </div>' +
+                              '    <div class="clearfix form-group">' +
+                              '      <label for="' + dialogId + '-default-gw" class="col-md-3">' + res.modificationDialog.defaultGW + ': </label>' +
+                              '      <div class="col-md-9">' +
+                              '        <input type="text" name="' + html.gatewayField + '" id="' + dialogId + '-default-gw" class="form-control">' +
+                              '      </div>' +
+                              '    </div>' +
+                              '  </div>' +
+                              '  <div id="' + html.tab2 + '" role="tabpanel" class="tab-pane">' +
+                              '    <div class="' + html.cLoading + '">' + res.loadingInfo + '</div>' +
+                              '    <div class="' + html.cLoaded + '">' +
+                              '      <div class="clearfix form-group">' +
+                              '        <label for="' + dialogId + '-ifaces" class="col-md-3">' + res.name + ': </label>' +
+                              '        <div class="col-md-9">' +
+                              '          <select name="' + html.iFaceSelector + '" id="' + dialogId + '-ifaces"  size="1" class="form-control">' +
+                              '            <option value="loading">' + res.loadingInfo + '</option>' +
+                              '          </select>' +
+                              '        </div>' +
+                              '      </div>' +
+                              '      <hr>' +
+                              '      <div class="clearfix form-group ' + html.cIFaceDetails + '">' +
+                              '        <div class="clearfix form-group">' +
+                              '          <label for="' + dialogId + '-idaddr" class="col-md-3">' + res.modificationDialog.ipAddress + ': </label>' +
+                              '          <div class="col-md-9">' +
+                              '            <input type="text" name="' + html.ipField + '" id="' + dialogId + '-idaddr" class="form-control">' +
+                              '          </div>' +
+                              '        </div>' +
+                              '        <div class="clearfix form-group">' +
+                              '          <label for="' + dialogId + '-subnet" class="col-md-3">' + res.modificationDialog.subnetMask + ': </label>'+
+                              '          <div class="col-md-9">' +
+                              '            <input type="text" name="' + html.subnetField + '" id="' + dialogId + '-subnet" class="form-control">' +
+                              '          </div>' +
+                              '        </div>' +
+                              '      </div>' +
+                              '    </div>' +
+                              '    <div class="' + html.cNoIFaceDetails + '">' + res.modificationDialog.noSettings + '</div>' +
+                              '  </div>' +
+                              '</div>');
+            Modal.call(this, dialogId, parentSelector, res.modificationDialog.title, dialogForm, true);
+        }
+
+        // Inheritance
+        Dialog.prototype = Object.create(Modal.prototype);
+        Dialog.prototype.constructor = Dialog;
+
+        // Own methods
+        /**
+         * @return The selected tab number (starting in 1).
+         */
+        Dialog.prototype.getSelectedTab = function() {
+            var selectedTab = $('li.active a', this.selector).attr('aria-controls');
+            if (selectedTab==html.tab1) return 1;
+            if (selectedTab==html.tab2) return 2;
+            return 0;  // else
+        };
+
+        Dialog.prototype.getDeviceName = function() {
+            return $('input[name="' + html.nameField + '"]', this.selector).val();
+        };
+
+        Dialog.prototype.setDeviceName = function(name) {
+            $('input[name="' + html.nameField + '"]', this.selector).val(name);
+        };
+
+        Dialog.prototype.getDefaultGateway = function() {
+            return $('input[name="' + html.gatewayField + '"]', this.selector).val();
+        };
+
+        /**
+         * @param defaultGw If it is null, the field is set to '' and hidden.
+         */
+        Dialog.prototype.setDefaultGateway = function(defaultGw) {
+            var gwSelector = $('input[name="' + html.gatewayField + '"]', this.selector);
+            if (defaultGw==null) {
+                gwSelector.parent().parent().hide();
+                gwSelector.val('');
+            } else {
+                gwSelector.val(defaultGw);
+                gwSelector.parent().parent().show();
+            }
+        };
+
+        Dialog.prototype.getSelectedPortUrl = function() {
+            return $('select[name="' + html.iFaceSelector + '"]', this.selector).val();
+        };
+
+        /**
+         * Updates the port selector and returns selected port.
+         * @return Selected port.
+         */
+        Dialog.prototype.setPorts = function(ports) {
+            return loadPortsInSelect(ports, $('select[name="' + html.iFaceSelector + '"]', this.selector), 0);
+        };
+
+        Dialog.prototype.getPortSelect = function() {
+            return $('select[name="' + html.iFaceSelector + '"]', this.selector);
+        };
+
+        Dialog.prototype.showIFaceDetails = function() {
+            $('.' + html.cIFaceDetails, this.selector).show();
+            $('.' + html.cNoIFaceDetails, this.selector).hide();
+        };
+
+        Dialog.prototype.hideIFaceDetails = function() {
+            $('.' + html.cIFaceDetails, this.selector).hide();
+            $('.' + html.cNoIFaceDetails, this.selector).show();
+        };
+
+        Dialog.prototype.getPortIpAddress = function() {
+            return $('input[name="' + html.ipField + '"]', this.selector).val();
+        };
+
+        Dialog.prototype.setPortIpAddress = function(ipAddress) {
+            $('input[name="' + html.ipField + '"]', this.selector).val(ipAddress);
+        };
+
+        Dialog.prototype.getPortSubnetMask = function() {
+            return $('input[name="' + html.subnetField + '"]', this.selector).val();
+        };
+
+        Dialog.prototype.setPortSubnetMask = function(subnetMask) {
+            $('input[name="' + html.subnetField + '"]', this.selector).val(subnetMask);
+        };
+
+        Dialog.prototype.showLoading = function() {
+            $('#' + html.tab2 + '>.' + html.cLoading, this.selector).hide();
+            $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).show();
+        };
+
+        Dialog.prototype.showLoaded = function() {
+            $('#' + html.tab2 + '>.' + html.cLoading, this.selector).show();
+            $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).hide();
+        };
+
+
+        return {
+            Object: Dialog
+        };
+    })();  // End deviceModification module
+
+
+
     // exposed functions and classes
     return {
         create: createComponents,
@@ -312,6 +497,7 @@ ptAnywhereWidgets.interaction = (function () {
     function init(components, client) {
         ptClient = client;
         deviceCreation.init(components[ptAnywhereWidgets.components.CREATION_DIALOG]);
+        deviceModification.init(components[ptAnywhereWidgets.components.MODIFICATION_DIALOG]);
         linkCreation.init(components[ptAnywhereWidgets.components.LINK_DIALOG]);
         if ( components.hasOwnProperty(ptAnywhereWidgets.components.CMD_DIALOG) ) {
             commandLine.init(components[ptAnywhereWidgets.components.CMD_DIALOG]);
@@ -362,6 +548,7 @@ ptAnywhereWidgets.interaction = (function () {
         }
 
         function openDialog(x, y, successfulCreationCallback) {
+            creationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
             creationDialog.getPrimaryButton().click(function() {
                 // We could also simply use their IDs...
                 var name = creationDialog.getDeviceName();
@@ -445,6 +632,7 @@ ptAnywhereWidgets.interaction = (function () {
 
             linkDialog.getPrimaryButton().hide();
             linkDialog.open();
+            linkDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
             linkDialog.getPrimaryButton().click(function() {
                 ptClient.createLink(linkDialog.getFromPortURL(),
                                     linkDialog.getToPortURL()).
@@ -462,6 +650,100 @@ ptAnywhereWidgets.interaction = (function () {
         };
     })();  // End linkCreation module
 
+    // Module for device modification
+    var deviceModification = (function () {
+        var modificationDialog = null;
+        var selectedDevice;
+
+        function init(modificationDialogObject) {
+            modificationDialog = modificationDialogObject;
+        }
+
+        function updateInterfaceInformation(port) {
+            if (port.hasOwnProperty('portIpAddress') && port.hasOwnProperty('portSubnetMask')) {
+                modificationDialog.setPortIpAddress(port.portIpAddress);
+                modificationDialog.setPortSubnetMask(port.portSubnetMask);
+                modificationDialog.showIFaceDetails();
+            } else {
+                modificationDialog.hideIFaceDetails();
+            }
+        }
+
+        function loadPortsForInterface(ports) {
+            var selectedPort = modificationDialog.setPorts(ports);
+            if (selectedPort!=null) {
+                updateInterfaceInformation(selectedPort);
+                modificationDialog.showLoading();
+            }
+            modificationDialog.getPortSelect().unbind();  // To avoid accumulation of change listeners from other calls
+            modificationDialog.getPortSelect().change(function () {
+                $('option:selected', this).each(function(index, element) { // There is only one selection
+                    var selectedIFace = $(element).text();
+                    for (var i = 0; i < ports.length; i++) {  // Instead of getting its info again (we save one request)
+                        if ( selectedIFace == ports[i].portName ) {
+                            updateInterfaceInformation(ports[i]);
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateEditForm() {
+            modificationDialog.showLoaded();
+
+            modificationDialog.setDeviceName(selectedDevice.label);
+            if (selectedDevice.hasOwnProperty('defaultGateway')) {
+                modificationDialog.setDefaultGateway(selectedDevice.defaultGateway);
+            } else {
+                modificationDialog.setDefaultGateway(null);
+            }
+
+            ptClient.getAllPorts(selectedDevice).
+                      done(loadPortsForInterface).
+                      fail(function() {
+                        modificationDialog.close();
+                      });
+        }
+
+        function handleModificationSubmit(successCallback, alwaysCallback) {
+            var selectedTab = modificationDialog.getSelectedTab();
+            if (selectedTab==1) { // General settings
+                var deviceLabel = modificationDialog.getDeviceName();
+                var defaultGateway = modificationDialog.getDefaultGateway();
+                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway).
+                                done(successCallback).
+                                always(alwaysCallback);
+            } else if (selectedTab==2) { // Interfaces
+                var portURL = modificationDialog.getSelectedPortUrl();
+                var portIpAddress = modificationDialog.getPortIpAddress();
+                var portSubnetMask = modificationDialog.getPortSubnetMask();
+                // Room for improvement: the following request could be avoided when nothing has changed
+                // In case just the port details are modified...
+                return ptClient.modifyPort(portURL, portIpAddress, portSubnetMask).always(alwaysCallback);
+            } else {
+                console.error('ERROR. Unknown selected tab: ' + selectedTab + '.');
+            }
+        }
+
+        function openDialog(deviceToModify, successfulNodeModificationCallback) {
+            selectedDevice = deviceToModify;
+            updateEditForm();
+            modificationDialog.getPrimaryButton().unbind();  // To avoid accumulation of click listeners from other calls
+            modificationDialog.getPrimaryButton().click(function() {
+                handleModificationSubmit(successfulNodeModificationCallback, function() {
+                    modificationDialog.close();
+                });
+            });
+            modificationDialog.open();
+        }
+
+        return {
+            init: init,
+            start: openDialog,
+        };
+    })();  // End deviceModification module
+
 
     // exposed functions and classes
     return {
@@ -469,6 +751,7 @@ ptAnywhereWidgets.interaction = (function () {
         commandLine: commandLine,
         deviceCreation: deviceCreation,
         linkCreation: linkCreation,
+        deviceModification: deviceModification,
     };
 })();
 
@@ -692,7 +975,7 @@ ptAnywhereWidgets.all = (function () {
                         editNode: function(data, callback) {
                                       if (isInteractive) {
                                           var successUpdatingNode = function(modifiedDevice) { nodes.update(modifiedDevice); };
-                                          deviceModificationDialog.open(nodes.get(data.id), successUpdatingNode);
+                                          ptAnywhereWidgets.interaction.deviceModification.start(nodes.get(data.id), successUpdatingNode);
                                           callback(data);
                                       }
                                   },
@@ -844,198 +1127,6 @@ ptAnywhereWidgets.all = (function () {
 
     })();
     // End networkMap module
-
-
-    // Module for device modification dialog
-    var deviceModificationDialog = (function () {
-
-        var dialogSelector = null;
-        var selectedDevice;
-        var html = {  // Literals for classes, identifiers or names
-            tabs: 'modify-dialog-tabs',
-            tab1: 'tabs-1',
-            tab2: 'tabs-2',
-            nameField: 'displayName',
-            gatewayField: 'defaultGateway',
-            ipField: 'ipAddress',
-            subnetField: 'subnetMask',
-            iFaceSelector: 'interface',
-            cLoading: 'loading',
-            cLoaded: 'loaded',
-            cIFaceDetails: 'iFaceDetails',
-            cNoIFaceDetails: 'noIFaceDetails',
-        };
-
-        function createDOM(parentSelector, dialogId) {
-            var dialogForm = $('<form></form>');
-            dialogForm.append('<ul class="nav nav-tabs" role="tablist">' +
-                              '  <li role="presentation" class="active">' +
-                              '     <a href="#' + html.tab1 + '" aria-controls="' + html.tab1 + '" role="tab" data-toggle="tab">' +
-                              '       ' + res.modificationDialog.globalSettings +
-                              '     </a>' +
-                              '  </li>' +
-                              '  <li role="presentation">' +
-                              '    <a href="#' + html.tab2 + '" aria-controls="' + html.tab2 + '" role="tab" data-toggle="tab">' +
-                              '      ' + res.modificationDialog.interfaces +
-                              '    </a>' +
-                              '  </li>' +
-                              '</ul>' +
-                              '<div class="tab-content">' +
-                              '  <div id="' + html.tab1 + '" role="tabpanel" class="tab-pane active">' +
-                              '    <div class="clearfix form-group">' +
-                              '      <label for="' + dialogId + '-name" class="col-md-3">' + res.name + ': </label>' +
-                              '      <div class="col-md-9">' +
-                              '        <input type="text" name="' + html.nameField + '" id="' + dialogId + '-name" class="form-control">' +
-                              '      </div>' +
-                              '    </div>' +
-                              '    <div class="clearfix form-group">' +
-                              '      <label for="' + dialogId + '-default-gw" class="col-md-3">' + res.modificationDialog.defaultGW + ': </label>' +
-                              '      <div class="col-md-9">' +
-                              '        <input type="text" name="' + html.gatewayField + '" id="' + dialogId + '-default-gw" class="form-control">' +
-                              '      </div>' +
-                              '    </div>' +
-                              '  </div>' +
-                              '  <div id="' + html.tab2 + '" role="tabpanel" class="tab-pane">' +
-                              '    <div class="' + html.cLoading + '">' + res.loadingInfo + '</div>' +
-                              '    <div class="' + html.cLoaded + '">' +
-                              '      <div class="clearfix form-group">' +
-                              '        <label for="' + dialogId + '-ifaces" class="col-md-3">' + res.name + ': </label>' +
-                              '        <div class="col-md-9">' +
-                              '          <select name="' + html.iFaceSelector + '" id="' + dialogId + '-ifaces"  size="1" class="form-control">' +
-                              '            <option value="loading">' + res.loadingInfo + '</option>' +
-                              '          </select>' +
-                              '        </div>' +
-                              '      </div>' +
-                              '      <hr>' +
-                              '      <div class="clearfix form-group ' + html.cIFaceDetails + '">' +
-                              '        <div class="clearfix form-group">' +
-                              '          <label for="' + dialogId + '-idaddr" class="col-md-3">' + res.modificationDialog.ipAddress + ': </label>' +
-                              '          <div class="col-md-9">' +
-                              '            <input type="text" name="' + html.ipField + '" id="' + dialogId + '-idaddr" class="form-control">' +
-                              '          </div>' +
-                              '        </div>' +
-                              '        <div class="clearfix form-group">' +
-                              '          <label for="' + dialogId + '-subnet" class="col-md-3">' + res.modificationDialog.subnetMask + ': </label>'+
-                              '          <div class="col-md-9">' +
-                              '            <input type="text" name="' + html.subnetField + '" id="' + dialogId + '-subnet" class="form-control">' +
-                              '          </div>' +
-                              '        </div>' +
-                              '      </div>' +
-                              '    </div>' +
-                              '    <div class="' + html.cNoIFaceDetails + '">' + res.modificationDialog.noSettings + '</div>' +
-                              '  </div>' +
-                              '</div>');
-            var e = createModal(dialogId, res.modificationDialog.title, dialogForm, true);
-            parentSelector.append(e);
-        }
-
-        function showLoadingPanel(loading) {
-            if (loading) {
-                $('#' + html.tab2 + '>.' + html.cLoading).hide();
-                $('#' + html.tab2 + '>.' + html.cLoaded).show();
-            } else {
-                $('#' + html.tab2 + '>.' + html.cLoading).show();
-                $('#' + html.tab2 + '>.' + html.cLoaded).hide();
-            }
-        }
-
-        function updateInterfaceInformation(port) {
-            if (port.hasOwnProperty('portIpAddress') && port.hasOwnProperty('portSubnetMask')) {
-                $('.' + html.cIFaceDetails, dialogSelector).show();
-                $('.' + html.cNoIFaceDetails, dialogSelector).hide();
-                $('input[name="' + html.ipField + '"]', dialogSelector).val(port.portIpAddress);
-                $('input[name="' + html.subnetField + '"]', dialogSelector).val(port.portSubnetMask);
-            } else {
-                $('.' + html.cIFaceDetails, dialogSelector).hide();
-                $('.' + html.cNoIFaceDetails, dialogSelector).show();
-            }
-        }
-
-        function loadPortsForInterface(ports) {
-            var selectSelector = $('select[name="' + html.iFaceSelector + '"]', dialogSelector);
-            var selectedPort = loadPortsInSelect(ports, selectSelector, 0);
-            if (selectedPort!=null) {
-                updateInterfaceInformation(selectedPort);
-                showLoadingPanel(true);
-            }
-            selectSelector.change(function () {
-                $('option:selected', this).each(function(index, element) { // There is only one selection
-                    var selectedIFace = $(element).text();
-                    for (var i = 0; i < ports.length; i++) {  // Instead of getting its info again (we save one request)
-                        if ( selectedIFace == ports[i].portName ) {
-                            updateInterfaceInformation(ports[i]);
-                            break;
-                        }
-                    }
-                });
-            });
-        }
-
-        function updateEditForm() {
-            showLoadingPanel(false);
-
-            $('input[name="' + html.nameField + '"]', dialogSelector).val(selectedDevice.label);
-            var gwSelector = $('input[name="' + html.gatewayField + '"]', dialogSelector);
-            if (selectedDevice.hasOwnProperty('defaultGateway')) {
-                gwSelector.val(selectedDevice.defaultGateway);
-                gwSelector.parent().parent().show();
-            } else {
-                gwSelector.val('');
-                gwSelector.parent().parent().hide();
-            }
-
-            ptClient.getAllPorts(selectedDevice).
-                      done(loadPortsForInterface).
-                      fail(function() {
-                        dialogSelector.modal('hide');
-                      });
-        }
-
-        function handleModificationSubmit(successCallback, alwaysCallback) {
-            // Check the tab
-            var selectedTab = $('li.active a', dialogSelector).attr('aria-controls');
-            if (selectedTab==html.tab1) { // General settings
-                var deviceLabel = $('input[name="' + html.nameField + '"]', dialogSelector).val();
-                var defaultGateway = $('input[name="' + html.gatewayField + '"]', dialogSelector).val();
-                return ptClient.modifyDevice(selectedDevice, deviceLabel, defaultGateway).
-                                done(successCallback).
-                                always(alwaysCallback);
-            } else if (selectedTab==html.tab2) { // Interfaces
-                var portURL = $('select[name="' + html.iFaceSelector + '"]', dialogSelector).val();
-                var portIpAddress = $('input[name="' + html.ipField + '"]', dialogSelector).val();
-                var portSubnetMask = $('input[name="' + html.subnetField + '"]', dialogSelector).val();
-                // Room for improvement: the following request could be avoided when nothing has changed
-                // In case just the port details are modified...
-                return ptClient.modifyPort(portURL, portIpAddress, portSubnetMask).always(alwaysCallback);
-            } else {
-                console.error('ERROR. Unknown selected tab: ' + selectedTab + '.');
-            }
-        }
-
-        function openDialog(deviceToModify, successfulNodeModificationCallback) {
-            selectedDevice = deviceToModify;
-            updateEditForm();
-            $('.btn-primary', dialogSelector).click(function() {
-                handleModificationSubmit(successfulNodeModificationCallback, function() {
-                    dialogSelector.modal('hide');
-                });
-            });
-            $('form', dialogSelector).on('submit', function( event ) { event.preventDefault(); });
-            dialogSelector.modal('show');
-        }
-
-        function createDialog(parentSelector, dialogId) {
-            createDOM(parentSelector, dialogId);
-            dialogSelector = $('#' + dialogId, parentSelector);
-            return dialogSelector;
-        }
-
-        return {
-            create: createDialog,
-            open: openDialog,
-        };
-    })();
-    // End deviceModificationDialog module
 
     // Module for device drag-and-drop creation menu
     var dragAndDropDeviceMenu = (function () {
