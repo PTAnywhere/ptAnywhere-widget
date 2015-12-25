@@ -485,456 +485,378 @@ ptAnywhereWidgets.dialogs = (function () {
 })();
 
 
-
 /**
  * HTML structure for the widget.
  */
-ptAnywhereWidgets.main = (function () {
-    var widgetSelector = null;
+ptAnywhereWidgets.creationMenu = (function () {
+    var menuSelector = null;
     var staticsPath = null;
-    var ptClient;  // JS client of the HTTP API
-    var staticsPath;
 
-    var draggableElements = [
-        {element: 'cloud', icon: 'cloud.png', caption: 'Cloud'},
-        {element: 'router', icon: 'router.png', caption: 'Router'},
-        {element: 'switch', icon: 'switch.png', caption: 'Switch'},
-        {element: 'pc', icon: 'pc.png', caption: 'Pc'},
+    var draggableElements = ['cloud', 'router', 'switch', 'pc'];
+    var images = [
+        {icon: 'cloud.png', caption: 'Cloud'},
+        {icon: 'router.png', caption: 'Router'},
+        {icon: 'switch.png', caption: 'Switch'},
+        {icon: 'pc.png', caption: 'Pc'},
     ];
 
-    // Before the components are created, an error message can be shown...
-    function init(selector) {
-        widgetSelector = $(selector);
-    }
-
     /* Public component creator */
-    function createComponents(pathToStatics, settings, client) {
-        staticsPath = addSlashIfNeeded(pathToStatics);
-        ptClient = client;
-        var isInteractive = ptClient!=null;
-
-
-        var netSelector = networkMap.create(isInteractive);  // Always loaded
-        var creationMenu = new CreationMenu();
-        widgetSelector.append(netSelector);
-        widgetSelector.append(creationMenu.selector);
-
-        if (isInteractive) {
-            for (var i in draggableElements) {
-                var el = draggableElements[i];
-                new DraggableDevice($('.' + el.element, creationMenu.selector), netSelector, el.element);
-            }
-        }
-    }
-
-    function addSlashIfNeeded(url) {
-      if (url.indexOf('/', this.length - 1) === -1 ) {
-        return url + '/';
-      }
-      return url;
-    }
-
-    /* Show message */
-    function showMessage(msg) {
-        widgetSelector.html('<div class="row message">' +
-                            '  <div class="col-md-8 col-md-offset-2 text-center">' +
-                            '    <h1>' + msg.title + '</h1>' + msg.content +
-                            '  </div>' +
-                            '</div>');
+    function createComponent(pathToStatics, settings) {
+        staticsPath = pathToStatics;
+        return createDOM();
     }
 
     /* Class for drag and drop device menu */
-    function CreationMenu() {
+    function createDOM() {
         var fieldset = $('<fieldset></fieldset>');
         fieldset.tooltip({title: res.creationMenu.legend});
         var rowHolder = $('<div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12"></div>');
         var figuresHolder = $('<div class="row"></div>');
         for (var i in draggableElements) {
-            figuresHolder.append(this.getFigureDOM(draggableElements[i]));
+            figuresHolder.append(getFigureDOM(draggableElements[i], images[i]));
         }
         rowHolder.append(figuresHolder);
         fieldset.append(rowHolder);
-        this.selector = $('<div class="creation-menu"></div>');
-        this.selector.append(fieldset);
+        menuSelector = $('<div class="creation-menu"></div>');
+        menuSelector.append(fieldset);
+        return menuSelector;
     }
 
-    CreationMenu.prototype.getFigureDOM = function(draggableElement) {
-        return '<figure class="col-md-3 col-sm-3 col-xs-3 text-center"><img class="' + draggableElement.element + '" alt="' +
-               draggableElement.element + '" ' + 'src="' + staticsPath +
-               draggableElement.icon + '"><figcaption>' +
-               draggableElement.caption + '</figcaption></figure>';
-    };
-    // End CreationMenu class
-
-
-    // Class for draggable device creation
-    function DraggableDevice(el, canvasEl, deviceType) {
-        this.el = el;
-        this.originalPosition = {
-            'left': el.css('left'),
-            'top': el.css('top')
-        };
-        this.canvas = canvasEl;
-        this.deviceType = deviceType;
-        var thisObj = this;
-        this.el.draggable({
-            helper: 'clone',
-            opacity: 0.4,
-            // The following properties interfere with the position I want to capture in the 'stop' event
-            /*revert: true, revertDuration: 2000,  */
-            start: function(event, ui) {
-                $(this).css({'opacity':'0.7'});
-            },
-            stop: function(event, ui) {
-                if (thisObj.collisionsWithCanvas(ui.helper)) {
-                    thisObj.startCreatingIcon(ui);
-                    thisObj.createDevice(ui.offset);
-                } else {
-                    thisObj.moveToStartingPosition();
-                }
-            }
-        });
+    function getFigureDOM(draggableElement, imageDetails) {
+        return '<figure class="col-md-3 col-sm-3 col-xs-3 text-center"><img class="' + draggableElement + '" alt="' +
+               draggableElement + '" ' + 'src="' + staticsPath +
+               imageDetails.icon + '"><figcaption>' +
+               imageDetails.caption + '</figcaption></figure>';
     }
 
-    // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
-    DraggableDevice.prototype.collisionsWithCanvas = function(draggingEl) {
-        var x1 = this.canvas.offset().left;
-        var y1 = this.canvas.offset().top;
-        var h1 = this.canvas.outerHeight(true);
-        var w1 = this.canvas.outerWidth(true);
-        var b1 = y1 + h1;
-        var r1 = x1 + w1;
-        var x2 = draggingEl.offset().left;
-        var y2 = draggingEl.offset().top;
-        var h2 = draggingEl.outerHeight(true);
-        var w2 = draggingEl.outerWidth(true);
-        var b2 = y2 + h2;
-        var r2 = x2 + w2;
+    function getElements() {
+        return draggableElements;
+    }
 
-        if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
-        return true;
-    };
-
-    DraggableDevice.prototype.moveToStartingPosition = function() {
-        var obj = this;
-        this.el.animate({'opacity':'1'}, 1000, function() {
-            obj.el.css({ // would be great with an animation too, but it doesn't work
-                'left': obj.originalPosition.left,
-                'top': obj.originalPosition.top
-            });
-        });
-    };
-
-    DraggableDevice.prototype.startCreatingIcon = function(ui) {
-        var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
-        image.css('width', ui.helper.css('width'));
-        var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
-        warning.prepend(image);
-        $('body').append(warning);
-        warning.css({'position': 'absolute',
-                     'left': ui.offset.left,
-                     'top': ui.offset.top});
-        this.creatingIcon = warning;
-    };
-
-    DraggableDevice.prototype.stopCreatingIcon = function(ui) {
-        this.moveToStartingPosition();
-        this.creatingIcon.remove();
-    };
-
-    DraggableDevice.prototype.createDevice = function(elementOffset) {
-        var x = elementOffset.left;
-        var y = elementOffset.top;
-        var position = networkMap.getCoordinate(x, y);
-        var thisObj = this;
-        // We don't use the return
-        return ptClient.addDevice({
-                    'group': this.deviceType,
-                    'x': position.x,
-                    'y': position.y
-                }).
-                done(function(data) {  // Success
-                    thisObj.stopCreatingIcon();
-                    networkMap.addNode(data);
-                }).
-                fail(function(data) {
-                    thisObj.stopCreatingIcon();
-                });
-    };
-    // End DraggableDevice class
-
-
-    // Module for creating device network map
-    var networkMap = (function () {
-        var nodes = new vis.DataSet();
-        var edges = new vis.DataSet();
-        var network;
-        var containerSelector = null;
-
-        var html = {  // Literals for classes, identifiers, names or paths
-            cLoadingIcon: 'loading-icon',
-            idLoadingMessage: 'loadingMessage',
-        };
-
-        // Created the DOM that shorty afterwards will be replaced by the network map
-        function createTemporaryDOM() {
-            var ret = $('<div class="network"></div>');
-            ret.append('<div class="loading"><img class="' + html.cLoadingIcon +
-                        '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
-                        '<div style="text-align: center;">' +
-                        '<p>' + res.network.loading + '<p>' +
-                        '<p id="' + html.idLoadingMessage + '"></p>' +
-                        '</div></div>');
-            ret.append('<div class="map"></div>');
-            return ret;
-        }
-
-        function showLoading() {
-            $('.loading', containerSelector).show();
-            $('.map', containerSelector).hide();
-        }
-
-        function showTopology() {
-            $('.loading', containerSelector).hide();
-            $('.map', containerSelector).show();
-        }
-
-        function getSelectedNode() {
-            var selected = network.getSelection();
-            if (selected.nodes.length!=1) { // Only if just one is selected
-                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
-                return null;
-            }
-            return nodes.get(selected.nodes[0]);
-        }
-
-        function drawTopology(isInteractive) {
-            // Create network element if needed (only the first time)
-            if (network==null) {
-                // create a network
-                var visData = { nodes : nodes, edges : edges };
-                var options = {
-                    nodes: {
-                        physics: false,
-                        font: '14px verdana black',
-                    },
-                    edges: {
-                        width: 3,
-                        selectionWidth: 1.4,
-                        color: {
-                            color:'#606060',
-                            highlight:'#000000',
-                            hover: '#000000'
-                        }
-                     },
-                    groups: {
-                        cloudDevice : {
-                            shape : 'image',
-                            image : staticsPath + 'cloud.png',
-                            size: 50,
-                        },
-                        routerDevice : {
-                            shape : 'image',
-                            image : staticsPath + 'router_cropped.png',
-                            size: 45,
-                        },
-                        switchDevice : {
-                            shape : 'image',
-                            image : staticsPath + 'switch_cropped.png',
-                            size: 35,
-                        },
-                        pcDevice : {
-                            shape : 'image',
-                            image : staticsPath + 'pc_cropped.png',
-                            size: 45,
-                        }
-                    },
-                    manipulation: {
-                        initiallyActive: true,
-                        addNode: function(data, callback) {
-                                    if (isInteractive) {
-                                        ptAnywhereWidgets.interaction.deviceCreation.start(data.x, data.y, addNode);
-                                    }
-                                 },
-                        addEdge: function(data, callback) {
-                                    if (isInteractive) {
-                                        var fromDevice = nodes.get(data.from);
-                                        var toDevice = nodes.get(data.to);
-                                        var sCallback = function(newLink) {
-                                                            edges.add([{
-                                                                id: newLink.id,
-                                                                url: newLink.url,
-                                                                from: fromDevice.id,
-                                                                to: toDevice.id,
-                                                            }]);
-                                                        };
-                                        ptAnywhereWidgets.interaction.linkCreation.start(fromDevice, toDevice, sCallback);
-                                    }
-                                 },
-                        editNode: function(data, callback) {
-                                      if (isInteractive) {
-                                          var successUpdatingNode = function(modifiedDevice) { nodes.update(modifiedDevice); };
-                                          ptAnywhereWidgets.interaction.deviceModification.start(nodes.get(data.id), successUpdatingNode);
-                                          callback(data);
-                                      }
-                                  },
-                        editEdge: false,
-                        deleteNode: function(data, callback) {
-                                        if (isInteractive) {
-                                            // Always (data.nodes.length>0) && (data.edges.length==0)
-                                            // FIXME There might be more than a node selected...
-                                            ptClient.removeDevice(nodes.get(data.nodes[0]));
-                                            // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                            callback(data);
-                                          }
-                                    },
-                        deleteEdge: function(data, callback) {
-                                        if (isInteractive) {
-                                            // Always (data.nodes.length==0) && (data.edges.length>0)
-                                            // TODO There might be more than an edge selected...
-                                            ptClient.removeLink( edges.get(data.edges[0]) );
-                                            // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                            callback(data);
-                                        }
-                                    },
-                    },
-                    locale: 'ptAnywhere',
-                    locales: {
-                        ptAnywhere: res.manipulationMenu
-                    },
-                };
-                network = new vis.Network($('.map', containerSelector).get(0), visData, options);
-                if (isInteractive) {
-                    network.on('doubleClick', function() {
-                        var selected = getSelectedNode();
-                        if (selected!=null)
-                            ptAnywhereWidgets.interaction.commandLine.start(selected);
-                    });
-                }
-            }
-        }
-
-        function createMap(isInteractive) {
-            containerSelector = createTemporaryDOM();
-            showLoading();
-            drawTopology(isInteractive);
-            return containerSelector;
-        }
-
-        function update(responseData) {
-            showTopology();
-            // Load data
-            if (responseData.devices!=null) {
-                nodes.clear();
-                nodes.add(responseData.devices);
-            }
-            if (responseData.edges!=null) {
-                edges.clear();
-                edges.add(responseData.edges);
-            }
-            network.fit();
-        }
-
-        function addNode(newNode) {
-            nodes.add(newNode);
-        }
-
-        function getByName(name) {
-            var ret = nodes.get({
-                filter: function (item) {
-                    return (item.label == name);
-                }
-            });
-            if (ret.length==0) return null;
-            // CAUTION: If there are more than a device with the same name, we return one randomly.
-            return ret[0];
-        }
-
-        /**
-         * @arg name Name of the node to be deleted.
-         */
-        function removeNode(name) {
-            nodes.remove(getByName(name));
-        }
-
-        /**
-         * @arg fromDeviceName Name of the origin endpoint.
-         * @arg toDeviceName Name of the destination endpoint.
-         */
-        function connect(fromDeviceName, toDeviceName) {
-            var newEdge = { from: getByName(fromDeviceName).id, to: getByName(toDeviceName).id };
-            edges.add(newEdge);
-        }
-
-        function getEdgeByNames(names) {
-            var ids = [getByName(names[0]).id, getByName(names[1]).id];
-            var ret = edges.get({
-                filter: function (item) {
-
-                    return ( (item.from == ids[0]) && (item.to == ids[1]) ) ||
-                           ( (item.from == ids[1]) && (item.to == ids[0]) );
-                }
-            });
-            if (ret.length==0) return null;
-            // CAUTION: If there are more than one link between devices, we return one randomly.
-            return ret[0];
-        }
-
-        /**
-         * @arg deviceNames Array with the names of the nodes to be disconnected.
-         */
-        function disconnect(deviceNames) {
-            edges.remove(getEdgeByNames(deviceNames).id);
-        }
-
-        /**
-         * Canvas' (0,0) does not correspond with the network map's DOM (0,0) position.
-         *   @arg x DOM X coordinate relative to the canvas element.
-         *   @arg y DOM Y coordinate relative to the canvas element.
-         *   @return Coordinates on the canvas with form {x:Number, y:Number}.
-         */
-        function toNetworkMapCoordinate(x, y) {
-            return network.DOMtoCanvas({x: x, y: y});
-        }
-
-        /**
-         * Shows an error where the network topology should have been loaded.
-         */
-        function showError(errorMsg) {
-            $('#' + html.idLoadingMessage, containerSelector).text(errorMsg);
-        }
-
-        // For instrumented widgets:
-        function getById(deviceId) {
-            return nodes.get(deviceId)
-        }
-
-        // Reveal public pointers to
-        // private functions and properties
-       return {
-            create: createMap,
-            update: update,
-            addNode: addNode,
-            removeNode: removeNode,
-            connect: connect,
-            disconnect: disconnect,
-            getCoordinate: toNetworkMapCoordinate,
-            error: showError,
-            // Methods that allow instrumentation
-            get: getById,
-       };
-
-    })();
-    // End networkMap module
+    function getSelector() {
+        return menuSelector;
+    }
 
 
     return {
-        init: init,
-        create: createComponents,
-        show: showMessage,
-        update: networkMap.update,
+        getSelector: getSelector,
+        create: createComponent,
+        getElements: getElements
     };
 })();
+
+
+/**
+ * HTML structure for the network map.
+ */
+ptAnywhereWidgets.map = (function () {
+    var nodes = new vis.DataSet();
+    var edges = new vis.DataSet();
+    var network;
+    var options;
+
+    var containerSelector = null;
+
+    var html = {  // Literals for classes, identifiers, names or paths
+        cLoadingIcon: 'loading-icon',
+        idLoadingMessage: 'loadingMessage',
+    };
+
+
+    function createMap(staticsPath) {
+        options = {
+            nodes: {
+                physics: false,
+                font: '14px verdana black',
+            },
+            edges: {
+                width: 3,
+                selectionWidth: 1.4,
+                color: {
+                    color:'#606060',
+                    highlight:'#000000',
+                    hover: '#000000'
+                }
+             },
+            groups: {
+                cloudDevice : {
+                    shape : 'image',
+                    image : staticsPath + 'cloud.png',
+                    size: 50,
+                },
+                routerDevice : {
+                    shape : 'image',
+                    image : staticsPath + 'router_cropped.png',
+                    size: 45,
+                },
+                switchDevice : {
+                    shape : 'image',
+                    image : staticsPath + 'switch_cropped.png',
+                    size: 35,
+                },
+                pcDevice : {
+                    shape : 'image',
+                    image : staticsPath + 'pc_cropped.png',
+                    size: 45,
+                }
+            },
+            manipulation: {
+                initiallyActive: true,
+                addNode: function(data, callback) {},
+                addEdge: function(data, callback) {},
+                editNode: function(data, callback) {},
+                editEdge: false,
+                deleteNode: function(data, callback) {},
+                deleteEdge: function(data, callback) {}
+            },
+            locale: 'ptAnywhere',
+            locales: {
+                ptAnywhere: res.manipulationMenu
+            },
+        };
+        containerSelector = createTemporaryDOM(staticsPath);
+        showLoading();
+        drawTopology();
+        return containerSelector;
+    }
+
+    // Created the DOM that shorty afterwards will be replaced by the network map
+    function createTemporaryDOM(staticsPath) {
+        var ret = $('<div class="network"></div>');
+        ret.append('<div class="loading"><img class="' + html.cLoadingIcon +
+                    '" src="' + staticsPath + 'loading.gif" alt="Loading network topology..." />' +
+                    '<div style="text-align: center;">' +
+                    '<p>' + res.network.loading + '<p>' +
+                    '<p id="' + html.idLoadingMessage + '"></p>' +
+                    '</div></div>');
+        ret.append('<div class="map"></div>');
+        return ret;
+    }
+
+    function showLoading() {
+        $('.loading', containerSelector).show();
+        $('.map', containerSelector).hide();
+    }
+
+    function showTopology() {
+        $('.loading', containerSelector).hide();
+        $('.map', containerSelector).show();
+    }
+
+    function getSelectedNode() {
+        var selected = network.getSelection();
+        if (selected.nodes.length!=1) { // Only if just one is selected
+            console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
+            return null;
+        }
+        return nodes.get(selected.nodes[0]);
+    }
+
+    function drawTopology() {
+        // Create network element if needed (only the first time)
+        if (network==null) {
+            // create a network
+            var visData = { nodes : nodes, edges : edges };
+            network = new vis.Network($('.map', containerSelector).get(0), visData, options);
+        }
+    }
+
+    function update(responseData) {
+        showTopology();
+        // Load data
+        if (responseData.devices!=null) {
+            nodes.clear();
+            nodes.add(responseData.devices);
+        }
+        if (responseData.edges!=null) {
+            edges.clear();
+            edges.add(responseData.edges);
+        }
+        network.fit();
+    }
+
+    function addNode(newNode) {
+        nodes.add(newNode);
+    }
+
+    function getByName(name) {
+        var ret = nodes.get({
+            filter: function (item) {
+                return (item.label == name);
+            }
+        });
+        if (ret.length==0) return null;
+        // CAUTION: If there are more than a device with the same name, we return one randomly.
+        return ret[0];
+    }
+
+    /**
+     * @arg name Name of the node to be deleted.
+     */
+    function removeNode(name) {
+        nodes.remove(getByName(name));
+    }
+
+    function updateNode(node) {
+        nodes.update(node);
+    }
+
+    /**
+     * @arg fromDevice origin endpoint.
+     *      It can be an object with an 'id' field or the device name (i.e., an string).
+     * @arg toDevice destination endpoint.
+     *      It can be an object with an 'id' field or the device name (i.e., an string).
+     * @arg linkId (optional, string) identifier of the new link.
+     * @arg linkUrl (optional, string) URL associated to the new link.
+     */
+    function connect(fromDevice, toDevice, linkId, linkUrl) {
+        // FIXME unify the way to connect devices
+        var newEdge;
+        if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
+            // Alternative used mainly in the replayer
+            newEdge = { from: getByName(fromDeviceName).id, to: getByName(toDeviceName).id };
+        } else {
+            // Alternative used in interactive widgets
+            newEdge = { from: fromDevice.id, to: toDevice.id };
+        }
+        if (linkId !== undefined) {
+            newEdge.id = linkId;
+        }
+        if (linkUrl !== undefined) {
+            newEdge.url = linkUrl;
+        }
+        edges.add(newEdge);
+    }
+
+    function getEdgeByNames(names) {
+        var ids = [getByName(names[0]).id, getByName(names[1]).id];
+        var ret = edges.get({
+            filter: function (item) {
+
+                return ( (item.from == ids[0]) && (item.to == ids[1]) ) ||
+                       ( (item.from == ids[1]) && (item.to == ids[0]) );
+            }
+        });
+        if (ret.length==0) return null;
+        // CAUTION: If there are more than one link between devices, we return one randomly.
+        return ret[0];
+    }
+
+    /**
+     * @arg deviceNames Array with the names of the nodes to be disconnected.
+     */
+    function disconnect(deviceNames) {
+        edges.remove(getEdgeByNames(deviceNames).id);
+    }
+
+    /**
+     * Canvas' (0,0) does not correspond with the network map's DOM (0,0) position.
+     *   @arg x DOM X coordinate relative to the canvas element.
+     *   @arg y DOM Y coordinate relative to the canvas element.
+     *   @return Coordinates on the canvas with form {x:Number, y:Number}.
+     */
+    function toNetworkMapCoordinate(x, y) {
+        return network.DOMtoCanvas({x: x, y: y});
+    }
+
+    /**
+     * Shows an error where the network topology should have been loaded.
+     */
+    function showError(errorMsg) {
+        $('#' + html.idLoadingMessage, containerSelector).text(errorMsg);
+    }
+
+    // For instrumented widgets:
+    function getById(deviceId) {
+        return nodes.get(deviceId);
+    }
+
+    // Begin event listeners
+    function onDoubleClick(callback) {
+        network.on('doubleClick', function() {
+            var selected = getSelectedNode();
+            if (selected!=null) callback(selected);
+        });
+    }
+
+    function onAddDevice(interactionCallback) {
+        options.manipulation.addNode = function(data, callback) {
+            interactionCallback(data.x, data.y);
+        };
+        network.setOptions(options);
+    }
+
+    function onAddLink(interactionCallback) {
+        options.manipulation.addEdge = function(data, callback) {
+            var fromDevice = nodes.get(data.from);
+            var toDevice = nodes.get(data.to);
+            interactionCallback(fromDevice, toDevice);
+        };
+        network.setOptions(options);
+    }
+
+    function onEditDevice(interactionCallback) {
+        options.manipulation.editNode = function(data, callback) {
+            interactionCallback( nodes.get(data.id) );
+            callback(data);
+        };
+        network.setOptions(options);
+    }
+
+    function onDeleteDevice(interactionCallback) {
+        options.manipulation.deleteNode = function(data, callback) {
+            // Always (data.nodes.length>0) && (data.edges.length==0)
+            // FIXME There might be more than a node selected...
+            interactionCallback(nodes.get(data.nodes[0]));
+            // This callback is important, otherwise it received 3 consecutive onDelete events.
+            callback(data);
+        };
+        network.setOptions(options);
+    }
+
+    function onDeleteLink(callback) {
+        options.manipulation.deleteEdge = function(data, callback) {
+            // Always (data.nodes.length==0) && (data.edges.length>0)
+            // TODO There might be more than an edge selected...
+            interactionCallback( edges.get(data.edges[0]) );
+            // This callback is important, otherwise it received 3 consecutive onDelete events.
+            callback(data);
+        };
+        network.setOptions(options);
+    }
+    // End event listeners
+
+    function getSelector() {
+        return containerSelector;
+    }
+
+    // Reveal public pointers to
+    // private functions and properties
+   return {
+        getSelector: getSelector,
+        create: createMap,
+        update: update,
+        addNode: addNode,
+        removeNode: removeNode,
+        updateNode: updateNode,
+        connect: connect,
+        disconnect: disconnect,
+        getCoordinate: toNetworkMapCoordinate,
+        error: showError,
+        // Methods that allow instrumentation
+        get: getById,
+        // Event listeners / interaction configuration
+        onDoubleClickDevice: onDoubleClick,
+        onAddDevice: onAddDevice,
+        onAddLink: onAddLink,
+        onEditDevice: onEditDevice,
+        onDeleteDevice: onDeleteDevice,
+        onDeleteLink: onDeleteLink,
+   };
+
+})();
+// End networkMap module
+
 
 /**
  * The interactive part of the widgets.
@@ -942,14 +864,52 @@ ptAnywhereWidgets.main = (function () {
 ptAnywhereWidgets.interaction = (function () {
     var ptClient;
 
-    function init(dialogs, client) {
+    function init(map, creationMenu, dialogs, client) {
         ptClient = client;
+
+        initMap(map);
+        var creatableElements = creationMenu.getElements();
+        for (var i in creatableElements) {
+            var el = creatableElements[i];
+            new DraggableDevice($('.' + el, creationMenu.getSelector()), map.getSelector(), el);
+        }
+
         deviceCreation.init(dialogs[ptAnywhereWidgets.dialogs.CREATION_DIALOG]);
         deviceModification.init(dialogs[ptAnywhereWidgets.dialogs.MODIFICATION_DIALOG]);
         linkCreation.init(dialogs[ptAnywhereWidgets.dialogs.LINK_DIALOG]);
         if ( dialogs.hasOwnProperty(ptAnywhereWidgets.dialogs.CMD_DIALOG) ) {
             commandLine.init(dialogs[ptAnywhereWidgets.dialogs.CMD_DIALOG]);
         }
+    }
+
+    function initMap(map) {
+        map.onDoubleClickDevice(function(selectedNode) {
+            commandLine.start(selectedNode);
+        });
+
+        map.onAddDevice(function(positionX, positionY) {
+            deviceCreation.start(positionX, positionY, map.addNode);
+        });
+
+        map.onAddLink(function(fromDevice, toDevice) {
+            linkCreation.start(fromDevice, toDevice, function(newLink) {  // If success...
+                map.connect(fromDevice, toDevice, newLink.id, newLink.url);
+            });
+        });
+
+        map.onEditDevice(function(device) {
+            deviceModification.start(device, function(modifiedDevice) {
+                map.updateNode(modifiedDevice);
+            });
+        });
+
+        map.onDeleteDevice(function(device) {
+            ptClient.removeDevice(device);
+        });
+
+        map.onDeleteLink(function(device) {
+            ptClient.removeLink( device );
+        });
     }
 
 
@@ -1193,6 +1153,103 @@ ptAnywhereWidgets.interaction = (function () {
     })();  // End deviceModification module
 
 
+    // Class for draggable device creation
+    function DraggableDevice(draggedSelector, canvasEl, deviceType) {
+        this.el = draggedSelector;
+        this.originalPosition = {
+            'left': this.el.css('left'),
+            'top': this.el.css('top')
+        };
+        this.canvas = canvasEl;
+        this.deviceType = deviceType;
+        var thisObj = this;
+        this.el.draggable({
+            helper: 'clone',
+            opacity: 0.4,
+            // The following properties interfere with the position I want to capture in the 'stop' event
+            /*revert: true, revertDuration: 2000,  */
+            start: function(event, ui) {
+                $(this).css({'opacity':'0.7'});
+            },
+            stop: function(event, ui) {
+                if (thisObj.collisionsWithCanvas(ui.helper)) {
+                    thisObj.startCreatingIcon(ui);
+                    thisObj.createDevice(ui.offset);
+                } else {
+                    thisObj.moveToStartingPosition();
+                }
+            }
+        });
+    }
+
+    // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
+    DraggableDevice.prototype.collisionsWithCanvas = function(draggingEl) {
+        var x1 = this.canvas.offset().left;
+        var y1 = this.canvas.offset().top;
+        var h1 = this.canvas.outerHeight(true);
+        var w1 = this.canvas.outerWidth(true);
+        var b1 = y1 + h1;
+        var r1 = x1 + w1;
+        var x2 = draggingEl.offset().left;
+        var y2 = draggingEl.offset().top;
+        var h2 = draggingEl.outerHeight(true);
+        var w2 = draggingEl.outerWidth(true);
+        var b2 = y2 + h2;
+        var r2 = x2 + w2;
+
+        if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
+        return true;
+    };
+
+    DraggableDevice.prototype.moveToStartingPosition = function() {
+        var obj = this;
+        this.el.animate({'opacity':'1'}, 1000, function() {
+            obj.el.css({ // would be great with an animation too, but it doesn't work
+                'left': obj.originalPosition.left,
+                'top': obj.originalPosition.top
+            });
+        });
+    };
+
+    DraggableDevice.prototype.startCreatingIcon = function(ui) {
+        var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
+        image.css('width', ui.helper.css('width'));
+        var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
+        warning.prepend(image);
+        $('body').append(warning);
+        warning.css({'position': 'absolute',
+                     'left': ui.offset.left,
+                     'top': ui.offset.top});
+        this.creatingIcon = warning;
+    };
+
+    DraggableDevice.prototype.stopCreatingIcon = function(ui) {
+        this.moveToStartingPosition();
+        this.creatingIcon.remove();
+    };
+
+    DraggableDevice.prototype.createDevice = function(elementOffset) {
+        var x = elementOffset.left;
+        var y = elementOffset.top;
+        var position = ptAnywhereWidgets.map.getCoordinate(x, y);
+        var thisObj = this;
+        // We don't use the return
+        return ptClient.addDevice({
+                    'group': this.deviceType,
+                    'x': position.x,
+                    'y': position.y
+                }).
+                done(function(data) {  // Success
+                    thisObj.stopCreatingIcon();
+                    ptAnywhereWidgets.map.addNode(data);
+                }).
+                fail(function(data) {
+                    thisObj.stopCreatingIcon();
+                });
+    };
+    // End DraggableDevice class
+
+
     // exposed functions and classes
     return {
         init: init,
@@ -1212,6 +1269,9 @@ ptAnywhereWidgets.interaction = (function () {
 // http://addyosmani.com/resources/essentialjsdesignpatterns/book/#revealingmodulepatternjavascript
 ptAnywhereWidgets.all = (function () {
 
+    var widgetSelector = null;
+
+
     function getSettings(customSettings) {
         var settings = { // Default values
             createSession: false,
@@ -1222,41 +1282,66 @@ ptAnywhereWidgets.all = (function () {
         return settings;
     }
 
+    function addSlashIfNeeded(url) {
+      if (url.indexOf('/', this.length - 1) === -1 ) {
+        return url + '/';
+      }
+      return url;
+    }
+
     function loadInteractiveComponents(pathToStatics, settings, ptClient) {
-        ptAnywhereWidgets.main.create(pathToStatics, settings, ptClient);
-        var components = ptAnywhereWidgets.dialogs.create(settings);
-        ptAnywhereWidgets.interaction.init(components, ptClient);
+        var staticsPath = addSlashIfNeeded(pathToStatics);
+
+        var menuSelector = ptAnywhereWidgets.creationMenu.create(staticsPath);
+        var mapSelector = ptAnywhereWidgets.map.create(staticsPath);
+        widgetSelector.append(mapSelector);
+        widgetSelector.append(menuSelector);
+
+        var dialogs = ptAnywhereWidgets.dialogs.create(settings);
+        ptAnywhereWidgets.interaction.init(ptAnywhereWidgets.map, ptAnywhereWidgets.creationMenu, dialogs, ptClient);
     }
 
     function loadSimpleComponents(pathToStatics, settings) {
-        ptAnywhereWidgets.main.create(pathToStatics, settings, null);
+        // TODO adapt to new shape!
+        ptAnywhereWidgets.map.create(pathToStatics);
         ptAnywhereWidgets.dialogs.create(settings);
+    }
+
+
+    /* Show message */
+    function showMessage(msg) {
+        widgetSelector.html('<div class="row message">' +
+                            '  <div class="col-md-8 col-md-offset-2 text-center">' +
+                            '    <h1>' + msg.title + '</h1>' + msg.content +
+                            '  </div>' +
+                            '</div>');
     }
 
     // Widget configurator/initializer
     function initInteractive(selector, apiURL, pathToStatics, customSettings) {
         var settings = getSettings(customSettings);
-        ptAnywhereWidgets.main.init(selector);
+        // Before the components are created, an error message can be shown...
+        widgetSelector = $(selector);
         if (settings.createSession && settings.fileToOpen!=null) {
-            ptAnywhereWidgets.main.show(res.session.creating);
+            showMessage(res.session.creating);
             ptAnywhere.http.newSession(apiURL, settings.fileToOpen, function(newSessionURL) {
                 $.get(newSessionURL, function(sessionId) {
                     window.location.href =  '?session=' + sessionId;
                 });
             }).fail(function(data) {
-                ptAnywhereWidgets.main.show(res.session.unavailable);
+                showMessage(res.session.unavailable);
             });
         } else {
             // JS client of the HTTP API
             var ptClient = new ptAnywhere.http.Client(apiURL, function() {
-                ptAnywhereWidgets.main.show(res.network.notLoaded);
+                showMessage(res.network.notLoaded);
             });
 
             loadInteractiveComponents(pathToStatics, settings, ptClient);
 
             ptClient.getNetwork(
                 function(data) {
-                    ptAnywhereWidgets.main.update(data);
+                    ptAnywhereWidgets.map.update(data);
                 },
                 function(tryCount, maxRetries, errorType) {
                     var errorMessage;
@@ -1269,7 +1354,7 @@ ptAnywhereWidgets.all = (function () {
                                     break;
                         default: errorMessage = res.network.errorUnknown;
                     }
-                    networkMap.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
+                    ptAnywhereWidgets.map.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
                 });
         }
     }
@@ -1278,13 +1363,13 @@ ptAnywhereWidgets.all = (function () {
     function initNonInteractive(selector, pathToStatics, networkData, customSettings) {
         var settings = getSettings(customSettings);
         loadSimpleComponents(pathToStatics, settings);
-        ptAnywhereWidgets.main.update(networkData);
+        ptAnywhereWidgets.map.update(networkData);
         return {  // Controls to programatically modify the module
-            addDevice: networkMap.addNode,
-            removeDevice: networkMap.removeNode,
-            connect: networkMap.connect,
-            disconnect: networkMap.disconnect,
-            reset: function() { ptAnywhereWidgets.main.update(networkData); },
+            addDevice: ptAnywhereWidgets.map.addNode,
+            removeDevice: ptAnywhereWidgets.map.removeNode,
+            connect: ptAnywhereWidgets.map.connect,
+            disconnect: ptAnywhereWidgets.map.disconnect,
+            reset: function() { ptAnywhereWidgets.map.update(networkData); },
         };
     }
 
