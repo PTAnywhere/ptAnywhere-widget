@@ -646,7 +646,7 @@ ptAnywhereWidgets.all = (function () {
                 var newEdge;
                 if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
                     // Alternative used mainly in the replayer
-                    newEdge = { from: getByName(fromDeviceName).id, to: getByName(toDeviceName).id };
+                    newEdge = { from: getByName(fromDevice).id, to: getByName(toDevice).id };
                 } else {
                     // Alternative used in interactive widgets
                     newEdge = { from: fromDevice.id, to: toDevice.id };
@@ -1318,20 +1318,20 @@ ptAnywhereWidgets.all = (function () {
       return url;
     }
 
-    function loadInteractiveComponents(pathToStatics, settings, ptClient) {
+    function loadComponents(pathToStatics, settings) {
         var staticsPath = addSlashIfNeeded(pathToStatics);
         main.create(staticsPath);
-        var dlgs = dialogs.create(settings);
+        return dialogs.create(settings);
+    }
+
+    function loadInteractiveComponents(pathToStatics, settings, ptClient) {
+        var dlgs = loadComponents(pathToStatics, settings);
         interaction.init(main.map, main.creationMenu, dlgs, ptClient);
     }
 
-    function loadSimpleComponents(pathToStatics, settings) {
-        // TODO adapt to new shape!
-        map.create(pathToStatics);
-        dialogs.create(settings);
-    }
-
-    // Widget configurator/initializer
+    /*
+     * It creates an interactive widget.
+     */
     function initInteractive(selector, apiURL, pathToStatics, customSettings) {
         var settings = getSettings(customSettings);
         main.init(selector);
@@ -1372,16 +1372,17 @@ ptAnywhereWidgets.all = (function () {
         }
     }
 
-    // Widget configurator/initializer
+    /*
+     * It creates a non interactive widget and returns the methods to control it.
+     */
     function initNonInteractive(selector, pathToStatics, networkData, customSettings) {
         var settings = getSettings(customSettings);
-        loadSimpleComponents(pathToStatics, settings);
+        main.init(selector);
+        var dlgs = loadComponents(pathToStatics, settings);
         main.map.update(networkData);
         return {  // Controls to programatically modify the module
-            addDevice: main.map.addNode,
-            removeDevice: main.map.removeNode,
-            connect: main.map.connect,
-            disconnect: main.map.disconnect,
+            map: main.map,
+            dialogs: dlgs,
             reset: function() { main.map.update(networkData); },
         };
     }
