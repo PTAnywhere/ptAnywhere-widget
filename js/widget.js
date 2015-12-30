@@ -593,6 +593,10 @@ ptAnywhereWidgets.all = (function () {
                 }
             }
 
+            function fit() {
+                network.fit();
+            }
+
             function update(responseData) {
                 showTopology();
                 // Load data
@@ -609,17 +613,6 @@ ptAnywhereWidgets.all = (function () {
 
             function addNode(newNode) {
                 nodes.add(newNode);
-            }
-
-            function getByName(name) {
-                var ret = nodes.get({
-                    filter: function (item) {
-                        return (item.label == name);
-                    }
-                });
-                if (ret.length==0) return null;
-                // CAUTION: If there are more than a device with the same name, we return one randomly.
-                return ret[0];
             }
 
             /**
@@ -703,6 +696,17 @@ ptAnywhereWidgets.all = (function () {
                 return nodes.get(deviceId);
             }
 
+            function getByName(name) {
+                var ret = nodes.get({
+                    filter: function (item) {
+                        return (item.label == name);
+                    }
+                });
+                if (ret.length==0) return null;
+                // CAUTION: If there are more than a device with the same name, we return one randomly.
+                return ret[0];
+            }
+
             // Begin event listeners
             function onDoubleClick(callback) {
                 network.on('doubleClick', function() {
@@ -768,6 +772,7 @@ ptAnywhereWidgets.all = (function () {
                 getSelector: getSelector,
                 create: createMap,
                 update: update,
+                fit: fit,
                 addNode: addNode,
                 removeNode: removeNode,
                 updateNode: updateNode,
@@ -775,8 +780,8 @@ ptAnywhereWidgets.all = (function () {
                 disconnect: disconnect,
                 getCoordinate: toNetworkMapCoordinate,
                 error: showError,
-                // Methods that allow instrumentation
-                get: getById,
+                // Method mainly for instrumentation
+                get: getByName,
                 // Event listeners / interaction configuration
                 onDoubleClickDevice: onDoubleClick,
                 onAddDevice: onAddDevice,
@@ -837,11 +842,11 @@ ptAnywhereWidgets.all = (function () {
             $('body').append(componentsWrapper);
 
             var components = {};
-            components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device');
-            components[MODIFICATION] = new deviceModificationDialog.Object(componentsWrapper, 'modify-device');
-            components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices');
+            components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device', settings.backdrop);
+            components[MODIFICATION] = new deviceModificationDialog.Object(componentsWrapper, 'modify-device', settings.backdrop);
+            components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices', settings.backdrop);
             if (settings.commandLine) {
-                components[CMD] = new cmdDialog.Object(componentsWrapper);
+                components[CMD] = new cmdDialog.Object(componentsWrapper, settings.backdrop);
             }
             return components;
         }
@@ -856,8 +861,11 @@ ptAnywhereWidgets.all = (function () {
         /**
          * Parent modal class.
          */
-        function Modal(modalId, parentSelector, modalTitle, modalBody, hasSubmitButton) {
-            var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
+        function Modal(modalId, parentSelector, modalTitle, modalBody, hasSubmitButton, hasBackdrop) {
+            this.options = {
+                backdrop: hasBackdrop,
+            };
+            var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label" data-backdrop="">' +
                         '  <div class="modal-dialog" role="document">' +
                         '    <div class="modal-content">' +
                         '      <div class="modal-header">' +
@@ -881,6 +889,7 @@ ptAnywhereWidgets.all = (function () {
         }
 
         Modal.prototype.open = function() {
+            this.selector.modal(this.options);
             this.selector.modal('show');
         };
 
@@ -917,7 +926,10 @@ ptAnywhereWidgets.all = (function () {
 
         // Component to embed command line
         var cmdDialog = (function () {
-            function Dialog(parentSelector) {
+            function Dialog(parentSelector, hasBackdrop) {
+                this.options = {
+                    backdrop: hasBackdrop,
+                };
                 this.selector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
                 var modal = '<div class="modal-dialog" role="document" style="height: 90%;">' +
                             '  <div class="modal-content" style="height: 100%;">' +
@@ -943,6 +955,7 @@ ptAnywhereWidgets.all = (function () {
             };
 
             Dialog.prototype.open = function() {
+                this.selector.modal(this.options);
                 this.selector.modal('show');
             };
 
@@ -962,7 +975,7 @@ ptAnywhereWidgets.all = (function () {
                 typeId: 'newDeviceType',
             };
 
-            function Dialog(parentSelector, dialogId) {
+            function Dialog(parentSelector, dialogId, hasBackdrop) {
                 var dialogForm = $('<form></form>');
                 dialogForm.append('<fieldset>' +
                                   '  <div class="clearfix form-group">' +
@@ -983,7 +996,7 @@ ptAnywhereWidgets.all = (function () {
                                   '    </div>' +
                                   '  </div>' +
                                   '</fieldset>');
-                Modal.call(this, dialogId, parentSelector, res.creationDialog.title, dialogForm, true);
+                Modal.call(this, dialogId, parentSelector, res.creationDialog.title, dialogForm, true, hasBackdrop);
                 //$('form', this.selector).on('submit', function( event ) { event.preventDefault(); });
             }
 
@@ -1021,7 +1034,7 @@ ptAnywhereWidgets.all = (function () {
                 errorMsg: 'error-msg',
             };
 
-            function Dialog(parentSelector, dialogId) {
+            function Dialog(parentSelector, dialogId, hasBackdrop) {
                 var dialogForm = $('<form name="link-devices"></form>');
                 dialogForm.append('<div class="' + clazz.loading + '">' + res.loadingInfo + '</div>');
                 dialogForm.append('<div class="' + clazz.loaded + '">' +
@@ -1047,7 +1060,7 @@ ptAnywhereWidgets.all = (function () {
                                   '  <p>' + res.linkDialog.error + '</p>' +
                                   '  <p class="' + clazz.errorMsg + '"></p>' +
                                   '</div>');
-                Modal.call(this, dialogId, parentSelector, res.linkDialog.title, dialogForm, true);
+                Modal.call(this, dialogId, parentSelector, res.linkDialog.title, dialogForm, true, hasBackdrop);
             }
 
             // Inheritance
@@ -1129,7 +1142,7 @@ ptAnywhereWidgets.all = (function () {
                 cNoIFaceDetails: 'noIFaceDetails',
             };
 
-            function Dialog(parentSelector, dialogId) {
+            function Dialog(parentSelector, dialogId, hasBackdrop) {
                 var dialogForm = $('<form></form>');
                 dialogForm.append('<ul class="nav nav-tabs" role="tablist">' +
                                   '  <li role="presentation" class="active">' +
@@ -1188,7 +1201,7 @@ ptAnywhereWidgets.all = (function () {
                                   '    <div class="' + html.cNoIFaceDetails + '">' + res.modificationDialog.noSettings + '</div>' +
                                   '  </div>' +
                                   '</div>');
-                Modal.call(this, dialogId, parentSelector, res.modificationDialog.title, dialogForm, true);
+                Modal.call(this, dialogId, parentSelector, res.modificationDialog.title, dialogForm, true, hasBackdrop);
             }
 
             // Inheritance
@@ -1204,6 +1217,14 @@ ptAnywhereWidgets.all = (function () {
                 if (selectedTab==html.tab1) return 1;
                 if (selectedTab==html.tab2) return 2;
                 return 0;  // else
+            };
+
+            Dialog.prototype.selectFirstTab = function() {
+                $(html.tab1, this.selector).tab('show');
+            };
+
+            Dialog.prototype.selectSecondTab = function() {
+                $(html.tab2, this.selector).tab('show');
             };
 
             Dialog.prototype.getDeviceName = function() {
@@ -1306,6 +1327,7 @@ ptAnywhereWidgets.all = (function () {
             createSession: false,
             fileToOpen: null,
             commandLine: true,
+            backdrop: true,
         };
         for (var attrName in customSettings) { settings[attrName] = customSettings[attrName]; }  // merge/override
         return settings;
@@ -1382,8 +1404,13 @@ ptAnywhereWidgets.all = (function () {
         main.map.update(networkData);
         return {  // Controls to programatically modify the module
             map: main.map,
-            dialogs: dlgs,
             reset: function() { main.map.update(networkData); },
+            dialogs: {
+                creation: dlgs[dialogs.CREATION_DIALOG],
+                modification: dlgs[dialogs.MODIFICATION_DIALOG],
+                link: dlgs[dialogs.LINK_DIALOG],
+                cmd: dlgs[dialogs.CMD_DIALOG],
+            },
         };
     }
 
