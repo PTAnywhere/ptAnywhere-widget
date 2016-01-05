@@ -839,14 +839,14 @@ ptAnywhereWidgets.all = (function () {
         function createComponents(settings) {
             // The wrapper must be visible and it should not be deleted/overriden (e.g., ERROR 410 overrides widgetSelector).
             var componentsWrapper = $('<div></div>');
-            $('body').append(componentsWrapper);
+            $(settings.dialogWrapper).append(componentsWrapper);
 
             var components = {};
-            components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device', settings.backdrop);
-            components[MODIFICATION] = new deviceModificationDialog.Object(componentsWrapper, 'modify-device', settings.backdrop);
-            components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices', settings.backdrop);
+            components[CREATION] = new creationDialog.Object(componentsWrapper, 'create-device', settings.backdrop, settings.backdropArea);
+            components[MODIFICATION] = new deviceModificationDialog.Object(componentsWrapper, 'modify-device', settings.backdrop, settings.backdropArea);
+            components[LINK] = new linkDialog.Object(componentsWrapper, 'link-devices', settings.backdrop, settings.backdropArea);
             if (settings.commandLine) {
-                components[CMD] = new cmdDialog.Object(componentsWrapper, settings.backdrop);
+                components[CMD] = new cmdDialog.Object(componentsWrapper, settings.backdrop, settings.backdropArea);
             }
             return components;
         }
@@ -861,11 +861,12 @@ ptAnywhereWidgets.all = (function () {
         /**
          * Parent modal class.
          */
-        function Modal(modalId, parentSelector, modalTitle, modalBody, hasSubmitButton, hasBackdrop) {
+        function Modal(modalId, parentSelector, modalTitle, modalBody, hasSubmitButton, hasBackdrop, backdropArea) {
             this.options = {
                 backdrop: hasBackdrop,
             };
-            var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label" data-backdrop="">' +
+            this.bdArea = backdropArea;
+            var modal = '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="' + modalId + 'Label">' +
                         '  <div class="modal-dialog" role="document">' +
                         '    <div class="modal-content">' +
                         '      <div class="modal-header">' +
@@ -891,6 +892,9 @@ ptAnywhereWidgets.all = (function () {
         Modal.prototype.open = function() {
             this.selector.modal(this.options);
             this.selector.modal('show');
+            if (this.options.backdrop && this.bdArea!=null) {
+                $('.modal-backdrop').appendTo(this.bdArea);
+            }
         };
 
         Modal.prototype.close = function() {
@@ -926,10 +930,11 @@ ptAnywhereWidgets.all = (function () {
 
         // Component to embed command line
         var cmdDialog = (function () {
-            function Dialog(parentSelector, hasBackdrop) {
+            function Dialog(parentSelector, hasBackdrop, backdropArea) {
                 this.options = {
                     backdrop: hasBackdrop,
                 };
+                this.bdArea = backdropArea;
                 this.selector = $('<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cmdModal"></div>');
                 var modal = '<div class="modal-dialog" role="document" style="height: 90%;">' +
                             '  <div class="modal-content" style="height: 100%;">' +
@@ -957,6 +962,13 @@ ptAnywhereWidgets.all = (function () {
             Dialog.prototype.open = function() {
                 this.selector.modal(this.options);
                 this.selector.modal('show');
+                if (this.options.backdrop && this.bdArea!=null) {
+                    $('.modal-backdrop').appendTo(this.bdArea);
+                }
+            };
+
+            Dialog.prototype.close = function() {
+                this.selector.modal('hide');
             };
 
             return {
@@ -975,7 +987,7 @@ ptAnywhereWidgets.all = (function () {
                 typeId: 'newDeviceType',
             };
 
-            function Dialog(parentSelector, dialogId, hasBackdrop) {
+            function Dialog(parentSelector, dialogId, hasBackdrop, backdropArea) {
                 var dialogForm = $('<form></form>');
                 dialogForm.append('<fieldset>' +
                                   '  <div class="clearfix form-group">' +
@@ -996,7 +1008,7 @@ ptAnywhereWidgets.all = (function () {
                                   '    </div>' +
                                   '  </div>' +
                                   '</fieldset>');
-                Modal.call(this, dialogId, parentSelector, res.creationDialog.title, dialogForm, true, hasBackdrop);
+                Modal.call(this, dialogId, parentSelector, res.creationDialog.title, dialogForm, true, hasBackdrop, backdropArea);
                 //$('form', this.selector).on('submit', function( event ) { event.preventDefault(); });
             }
 
@@ -1034,7 +1046,7 @@ ptAnywhereWidgets.all = (function () {
                 errorMsg: 'error-msg',
             };
 
-            function Dialog(parentSelector, dialogId, hasBackdrop) {
+            function Dialog(parentSelector, dialogId, hasBackdrop, backdropArea) {
                 var dialogForm = $('<form name="link-devices"></form>');
                 dialogForm.append('<div class="' + clazz.loading + '">' + res.loadingInfo + '</div>');
                 dialogForm.append('<div class="' + clazz.loaded + '">' +
@@ -1060,7 +1072,7 @@ ptAnywhereWidgets.all = (function () {
                                   '  <p>' + res.linkDialog.error + '</p>' +
                                   '  <p class="' + clazz.errorMsg + '"></p>' +
                                   '</div>');
-                Modal.call(this, dialogId, parentSelector, res.linkDialog.title, dialogForm, true, hasBackdrop);
+                Modal.call(this, dialogId, parentSelector, res.linkDialog.title, dialogForm, true, hasBackdrop, backdropArea);
             }
 
             // Inheritance
@@ -1142,7 +1154,7 @@ ptAnywhereWidgets.all = (function () {
                 cNoIFaceDetails: 'noIFaceDetails',
             };
 
-            function Dialog(parentSelector, dialogId, hasBackdrop) {
+            function Dialog(parentSelector, dialogId, hasBackdrop, backdropArea) {
                 var dialogForm = $('<form></form>');
                 dialogForm.append('<ul class="nav nav-tabs" role="tablist">' +
                                   '  <li role="presentation" class="active">' +
@@ -1201,7 +1213,7 @@ ptAnywhereWidgets.all = (function () {
                                   '    <div class="' + html.cNoIFaceDetails + '">' + res.modificationDialog.noSettings + '</div>' +
                                   '  </div>' +
                                   '</div>');
-                Modal.call(this, dialogId, parentSelector, res.modificationDialog.title, dialogForm, true, hasBackdrop);
+                Modal.call(this, dialogId, parentSelector, res.modificationDialog.title, dialogForm, true, hasBackdrop, backdropArea);
             }
 
             // Inheritance
@@ -1328,6 +1340,8 @@ ptAnywhereWidgets.all = (function () {
             fileToOpen: null,
             commandLine: true,
             backdrop: true,
+            backdropArea: null,
+            dialogWrapper: 'body',  // Class to apply to
         };
         for (var attrName in customSettings) { settings[attrName] = customSettings[attrName]; }  // merge/override
         return settings;
