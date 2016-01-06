@@ -1232,11 +1232,11 @@ ptAnywhereWidgets.all = (function () {
             };
 
             Dialog.prototype.selectFirstTab = function() {
-                $(html.tab1, this.selector).tab('show');
+                $('.nav-tabs a[href="#' + html.tab1 + '"]', this.selector).tab('show');
             };
 
             Dialog.prototype.selectSecondTab = function() {
-                $(html.tab2, this.selector).tab('show');
+                $('.nav-tabs a[href="#' + html.tab2 + '"]', this.selector).tab('show');
             };
 
             Dialog.prototype.getDeviceName = function() {
@@ -1308,13 +1308,13 @@ ptAnywhereWidgets.all = (function () {
             };
 
             Dialog.prototype.showLoading = function() {
-                $('#' + html.tab2 + '>.' + html.cLoading, this.selector).hide();
-                $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).show();
+                $('#' + html.tab2 + '>.' + html.cLoading, this.selector).show();
+                $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).hide();
             };
 
             Dialog.prototype.showLoaded = function() {
-                $('#' + html.tab2 + '>.' + html.cLoading, this.selector).show();
-                $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).hide();
+                $('#' + html.tab2 + '>.' + html.cLoading, this.selector).hide();
+                $('#' + html.tab2 + '>.' + html.cLoaded, this.selector).show();
             };
 
 
