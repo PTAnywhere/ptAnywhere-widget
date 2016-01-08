@@ -959,6 +959,10 @@ ptAnywhereWidgets.all = (function () {
                 $('.modal-body', this.selector).html(htmlSnippet);
             };
 
+            Dialog.prototype.appendTo = function(subselector, htmlSnippet) {
+                $(subselector, this.selector).append(htmlSnippet);
+            };
+
             Dialog.prototype.open = function() {
                 this.selector.modal(this.options);
                 this.selector.modal('show');
