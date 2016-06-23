@@ -1,0 +1,24 @@
+{
+  "name": "ptAnywhere",
+  "description": "User friendly interface to use PT Anywhere.",
+  "homepage": "http://pt-anywhere.kmi.open.ac.uk",
+  "repository": "https://github.com/PTAnywhere/ptAnywhere-widget",
+  "version": "2.0.1",
+  "devDependencies": {
+    "bower": "~1.7.9",
+    "gulp": "^3.9.1",
+    "gulp-load-plugins": "^1.2.4",
+    "gulp-jshint": "^1.5.3",
+    "gulp-concat": "^2.6.0",
+    "gulp-uglify": "^1.2.4",
+    "gulp-rename": "^1.2.2",
+    "gulp-header": "^1.8.3",
+    "del": "^2.2.0",
+    "jasmine-core": "^2.2.1",
+    "karma": "^0.13.22",
+    "karma-jasmine": "^1.0.2",
+    "karma-firefox-launcher": "^1.0.0",
+    "karma-chrome-launcher": "^1.0.1",
+    "karma-safari-launcher": "^1.0.0"
+  }
+}

@@ -1,6 +1,16 @@
 
-# Bower components
-bower_components
-
 # Mac OS X
 .DS_Store
+
+
+# PTAnywhere app (JS)
+scripts/*
+!scripts/package.json
+!scripts/bower.json
+
+# Gulp  configuration files
+!dashboard/scripts/gulpfile.js
+
+# Karma configuration files
+!dashboard/scripts/karma.conf.js
+!dashboard/scripts/karma.conf.ci.js

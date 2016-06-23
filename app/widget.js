@@ -106,7 +106,7 @@ ptAnywhereWidgets.all = (function () {
                     x: x,
                     y: y
                 };
-                if (label!="") newDevice['label'] = label;
+                if (label !== '') newDevice.label = label;
                 return ptClient.addDevice(newDevice).done(callback);
             }
 
@@ -143,7 +143,7 @@ ptAnywhereWidgets.all = (function () {
 
             function afterLoadingSuccess(ports, isFrom) {
                 // TODO Right now it returns a null, but it would be much logical to return an empty array.
-                if (ports==null || ports.length==0) {
+                if (ports === null || ports.length === 0) {
                     linkDialog.showError('One of the devices you are trying to link has no available interfaces.');
                 } else {
                     if (isFrom) {
@@ -161,7 +161,7 @@ ptAnywhereWidgets.all = (function () {
             }
 
             function afterLoadingError(device, errorData) {
-                if (errorData.status==410) {
+                if (errorData.status === 410) {
                     linkDialog.close(); // session expired, error will be shown replacing the map.
                 } else {
                     linkDialog.showError('Unable to get ' + device.label + ' device\'s ports.');
@@ -236,7 +236,7 @@ ptAnywhereWidgets.all = (function () {
 
             function loadPortsForInterface(ports) {
                 var selectedPort = modificationDialog.setPorts(ports);
-                if (selectedPort!=null) {
+                if (selectedPort !== null) {
                     updateInterfaceInformation(selectedPort);
                     modificationDialog.showLoaded();
                 }
@@ -486,7 +486,7 @@ ptAnywhereWidgets.all = (function () {
         var map = (function () {
             var nodes = new vis.DataSet();
             var edges = new vis.DataSet();
-            var network;
+            var network = null;
             var options;
 
             var containerSelector = null;
@@ -579,7 +579,7 @@ ptAnywhereWidgets.all = (function () {
 
             function getSelectedNode() {
                 var selected = network.getSelection();
-                if (selected.nodes.length!=1) { // Only if just one is selected
+                if (selected.nodes.length !== 1) { // Only if just one is selected
                     console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
                     return null;
                 }
@@ -587,15 +587,15 @@ ptAnywhereWidgets.all = (function () {
             }
 
             function isOnlyOneEdgeSelected(event) {
-                return event.nodes.length==0 && event.edges.length==1;
+                return event.nodes.length === 0 && event.edges.length === 1;
             }
 
             function isNodeSelected(event) {
-                return event.nodes.length>0;
+                return event.nodes.length > 0;
             }
 
             function isShowingEndpoint(node) {
-                return node.label.indexOf('\n') != -1;
+                return node.label.indexOf('\n') !== -1;
             }
 
             function showEndpointsInEdge(edge) {
@@ -632,7 +632,7 @@ ptAnywhereWidgets.all = (function () {
 
             function drawTopology() {
                 // Create network element if needed (only the first time)
-                if (network==null) {
+                if (network === null) {
                     // create a network
                     var visData = { nodes : nodes, edges : edges };
                     network = new vis.Network($('.map', containerSelector).get(0), visData, options);
@@ -659,11 +659,11 @@ ptAnywhereWidgets.all = (function () {
             function update(responseData) {
                 showTopology();
                 // Load data
-                if (responseData.devices!=null) {
+                if (responseData.devices !== null) {
                     nodes.clear();
                     nodes.add(responseData.devices);
                 }
-                if (responseData.edges!=null) {
+                if (responseData.edges !== null) {
                     edges.clear();
                     edges.add(responseData.edges);
                 }
@@ -724,11 +724,11 @@ ptAnywhereWidgets.all = (function () {
                 var ids = [getByName(names[0]).id, getByName(names[1]).id];
                 var ret = edges.get({
                     filter: function (item) {
-                        return ( (item.from == ids[0]) && (item.to == ids[1]) ) ||
-                               ( (item.from == ids[1]) && (item.to == ids[0]) );
+                        return ( (item.from === ids[0]) && (item.to === ids[1]) ) ||
+                               ( (item.from === ids[1]) && (item.to === ids[0]) );
                     }
                 });
-                if (ret.length==0) return null;
+                if (ret.length === 0) return null;
                 // CAUTION: If there are more than one link between devices, we return one randomly.
                 return ret[0];
             }
@@ -768,7 +768,7 @@ ptAnywhereWidgets.all = (function () {
                         return (item.label == name);
                     }
                 });
-                if (ret.length==0) return null;
+                if (ret.length === 0) return null;
                 // CAUTION: If there are more than a device with the same name, we return one randomly.
                 return ret[0];
             }
@@ -777,7 +777,7 @@ ptAnywhereWidgets.all = (function () {
             function onDoubleClick(callback) {
                 network.on('doubleClick', function() {
                     var selected = getSelectedNode();
-                    if (selected!=null) callback(selected);
+                    if (selected !== null) callback(selected);
                 });
             }
 
@@ -960,7 +960,7 @@ ptAnywhereWidgets.all = (function () {
         Modal.prototype.open = function() {
             this.selector.modal(this.options);
             this.selector.modal('show');
-            if (this.options.backdrop && this.bdArea!=null) {
+            if (this.options.backdrop && this.bdArea !== null) {
                 $('.modal-backdrop').appendTo(this.bdArea);
             }
         };
@@ -1034,7 +1034,7 @@ ptAnywhereWidgets.all = (function () {
             Dialog.prototype.open = function() {
                 this.selector.modal(this.options);
                 this.selector.modal('show');
-                if (this.options.backdrop && this.bdArea!=null) {
+                if (this.options.backdrop && this.bdArea !== null) {
                     $('.modal-backdrop').appendTo(this.bdArea);
                 }
             };
@@ -1201,8 +1201,8 @@ ptAnywhereWidgets.all = (function () {
             // Should be private
             Dialog.prototype.showPanel = function(classToShow) {
                 var classNames = [clazz.loading, clazz.loaded, clazz.error];
-                for (i in classNames) {
-                    if (classNames[i]==classToShow) {
+                for (var i in classNames) {
+                    if (classNames[i] === classToShow) {
                         $('.' + classNames[i], this.selector).show();
                     } else {
                         $('.' + classNames[i], this.selector).hide();
@@ -1336,7 +1336,7 @@ ptAnywhereWidgets.all = (function () {
              */
             Dialog.prototype.setDefaultGateway = function(defaultGw) {
                 var gwSelector = $('input[name="' + html.gatewayField + '"]', this.selector);
-                if (defaultGw==null) {
+                if (defaultGw === null) {
                     gwSelector.parent().parent().hide();
                     gwSelector.val('');
                 } else {
@@ -1485,7 +1485,7 @@ ptAnywhereWidgets.all = (function () {
         var settings = getSettings(customSettings);
         main.init(selector);
         if (settings.sessionCreation) {
-            if (settings.sessionCreation.fileToOpen!=null) {
+            if (settings.sessionCreation.fileToOpen !== null) {
                 main.showMessage(res.session.creating);
                 var previousSession = null;
                 if (settings.sessionCreation.tracked) {

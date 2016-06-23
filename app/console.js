@@ -34,34 +34,34 @@ ptAnywhereWidgets.console = (function () {
 
     Console.prototype.onConnect = function() {
         setConnected(this, true);
-    }
+    };
 
     Console.prototype.getConnectionCallback = function() {
         var consoleObject = this;
         return function() {
             consoleObject.onConnect();
         };
-    }
+    };
 
     Console.prototype.onWarning = function(message) {
         setConnected(this, false);
         $('.' + html.cInteractive, this.selector).hide();
         $('.' + html.cMessages, this.selector).html('<p>' + message + '</p>');
-    }
+    };
 
     Console.prototype.getWarningCallback = function() {
         var consoleObject = this;
         return function(message) {
             consoleObject.onWarning(message);
         };
-    }
+    };
 
     function addContent(cmd, msg) {
         // Not sure that we will ever get more than a line, but just in case.
         var lines = msg.split('\n');
         if (lines.length>1) {
             for (var i=0; i<lines.length-1; i++) { // Unnecessary?
-                if (i==0) {
+                if (i === 0) {
                     var lastLine = $('.' + html.cPrompt, cmd.selector).text();
                     if (lastLine.trim()!=='--More--')
                         $('.' + html.cMessages, cmd.selector).append(lastLine);
@@ -77,42 +77,42 @@ ptAnywhereWidgets.console = (function () {
 
     Console.prototype.onUpdate = function(message) {
         addContent(this, message);
-    }
+    };
 
     Console.prototype.getUpdateCallback = function() {
         var consoleObject = this;
         return function(message) {
             consoleObject.onUpdate(message);
         };
-    }
+    };
 
     Console.prototype.isShowingCached = function() {
         return this.showingCached;
-    }
+    };
 
     Console.prototype.clearCached = function() {
         this.setCommand('');
         this.cachedCurrentCommand = null;
-    }
+    };
 
     Console.prototype.getCached = function() {
         return this.cachedCurrentCommand;
-    }
+    };
 
     Console.prototype.isCaching = function() {
-        return this.cachedCurrentCommand != null;
-    }
+        return this.cachedCurrentCommand !== null;
+    };
 
     Console.prototype.updateCached = function() {
         this.cachedCurrentCommand = this.getCommand();
-    }
+    };
 
     Console.prototype.getCommand = function() {
         return $('.' + html.cCurrent, this.selector).text();
-    }
+    };
 
     Console.prototype.setCommand = function(command, showCurrentIfNull) {
-        if (command!=null) {
+        if (command !== null) {
             $('.' + html.cCurrent, this.selector).text(command);
             this.showingCached = false;
         } else {
@@ -121,22 +121,22 @@ ptAnywhereWidgets.console = (function () {
                 this.showingCached = true;
             }
         }
-    }
+    };
 
     Console.prototype.onReplaceCommand = function(command, showCurrentIfNull) {
         this.setCommand(command, showCurrentIfNull);
-    }
+    };
 
     Console.prototype.getReplaceCommandCallback = function() {
         var consoleObject = this;
         return function(command, showCurrentIfNull) {
             consoleObject.onReplaceCommand(command, showCurrentIfNull);
         };
-    }
+    };
 
     Console.prototype.onUpdate = function(message) {
         addContent(this, message);
-    }
+    };
 
     function createDOM(parentSelector) {
         var interactiveDiv = $('<div class="' + html.cInteractive + '"></div>');
