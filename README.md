@@ -1,2 +1,3 @@
-# widget-ui
+# ptAnywhere-widget
+
 GUI for PTAnywhere widgets.
