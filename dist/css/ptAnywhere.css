@@ -12,17 +12,30 @@
   margin: 5% auto;
 }
 
-/*** Network map ***/
 
-.network {
+/*** Loading map ***/
+
+.loading {
   height: 75%;
 }
 
-.network .loading-icon {
+.loading p {
+  margin: 1% 0;
+  text-align: center;
+}
+
+.loading-icon {
   display: block;
   padding-top: 190px;
   margin-left: auto;
   margin-right: auto;
+}
+
+
+/*** Network map ***/
+
+.network {
+  height: 75%;
 }
 
 .network .map {

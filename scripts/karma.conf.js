@@ -13,6 +13,10 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
+      'scripts/bower_components/angular/angular.min.js',
+      //'scripts/bower_components/angular-route/angular-route.min.js',
+      'scripts/bower_components/angular-mocks/angular-mocks.js',
+      'scripts/bower_components/vis/dist/vis.min.js',
       'app/**',  // The files to be tested
       'test/**'  // The tests
     ],
@@ -20,9 +24,9 @@ module.exports = function(config) {
 
     // list of files to exclude
     exclude: [
-        // Old JS not AngularJS files
-        'app/console.js',
-        'app/widget.js'
+      // Old JS not AngularJS files
+      'app/console.js',
+      'app/widget.js'
     ],
 
 

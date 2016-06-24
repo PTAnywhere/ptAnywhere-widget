@@ -39,6 +39,9 @@ gulp.task('concat', function (cb) {
       .pipe(gulp.dest(TMP));
 });
 
+// WARNING: It does the concat in alphabetical order.
+// Therefore, if a file named before "app" exists (the module definition is in app.js),
+// it will crash because the module would have not be defined by then.
 gulp.task('minimize', ['concat'], function (cb) {
    return gulp.src(TMP + '**.js')
       .pipe(plugins.uglify())
