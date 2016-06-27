@@ -17,9 +17,9 @@ angular.module('ptAnywhere', ['ngRoute'])
             }
         }
     }])
-    .config(['$httpProvider', function($httpProvider) {
+    /*.config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('HttpErrorsInterceptor');
-    }])
+    }])*/
     .config(['$routeProvider', 'baseUrl', function($routeProvider, baseUrl) {
         // configure the routing rules here
         $routeProvider.when('/', {

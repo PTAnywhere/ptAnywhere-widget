@@ -16,10 +16,14 @@ angular.module('ptAnywhere')
 
         api.startSession($routeParams.id);
         api.getNetwork()
-            .then(function(response) {
-                        mapData.load(response.data);
-                        $location.path('/s/' + $routeParams.id);
-                    });
+            .then(function(network) {
+                console.log('Llego!', network);
+                mapData.load(network);
+                $location.path('/s/' + $routeParams.id);
+            }, function(response) {
+                console.log(response);
+                $location.path('/not-found');
+            });
     }])
     .controller('WidgetController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
                                       function($location, $routeParams, api, mapData) {
