@@ -21,20 +21,22 @@ angular.module('ptAnywhere')
             startSession: function(sessionId) {
                 sessionUrl = apiUrl + '/sessions/' + sessionId;  // Building the URL manually :-(
             },
-            getNetwork: function() {
+            getNetwork: function(errorExplainer) {
                 // We want to process the same function no matter the number of attempt (/retry)
                 var ifSuccess = function(response) { return response.data; };
                 HttpRetry.setSuccess(ifSuccess);
+                HttpRetry.setExplainer(errorExplainer);
                 return $http.get(sessionUrl + '/network', {timeout: 2000})
                             .then(ifSuccess, HttpRetry.responseError);
             }
         };
     }])
-    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location',
-                           function($http, $q, $timeout, $location) {
+    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale_en',
+                           function($http, $q, $timeout, $location, res) {
         var tryCount = 0;
         var maxRetries = 5;
         var successCall = null;
+        var errorExplainer = null;
 
         function retry(httpConfig, waitForNextRetry) {
             return $timeout(function() {
@@ -42,45 +44,41 @@ angular.module('ptAnywhere')
                     }, waitForNextRetry);
         }
 
+        function getErrorExplanation(responseStatus) {
+            var errorMessage;
+            switch (responseStatus) {
+                case 503: errorMessage = res.network.errorUnavailable;
+                          break;
+                case 0: errorMessage = res.network.errorTimeout;
+                        break;
+                default: errorMessage = res.network.errorUnknown;
+            }
+            return errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.';
+        }
+
         function checkError(response) {
             if (response.status === 0 || response.status === 503) {
                 if (tryCount < maxRetries) {
-                    var delay = 2000;
-                    if (response.status === 0) {  // ERROR_TIMEOUT
-                        console.error('The topology could not be loaded: timeout.');
-                        delay = 0;
-                    }  // Else mark as ERROR_UNAVAILABLE
+                    // If timeout, let's try it again is without waiting.
+                    var delay = (response.status === 0)? 0 : 2000;
                     tryCount++;
+                    errorExplainer( getErrorExplanation(response.status) );
                     return retry(response.config, delay);
                 }
             }
             // E.g., session has expired and we get error 404 or 410
             return $q.reject(response);
         }
-        // TODO addListener: function listener for error message:  // or make it watchable by controller
 
         return {
             responseError: checkError,
             setSuccess: function(success) {
                 successCall = success;
+            },
+            setExplainer: function(explainer) {
+                errorExplainer = explainer;
             }
         };
-
-        /*
-        function(tryCount, maxRetries, errorType) {
-            var errorMessage;
-            switch (errorType) {
-                case ptAnywhere.http.UNAVAILABLE:
-                            errorMessage = res.network.errorUnavailable;
-                            break;
-                case ptAnywhere.http.TIMEOUT:
-                            errorMessage = res.network.errorTimeout;
-                            break;
-                default: errorMessage = res.network.errorUnknown;
-            }
-            main.map.error(errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.');
-        }
-        */
     }])
     .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
         return {

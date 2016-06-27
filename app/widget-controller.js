@@ -15,7 +15,9 @@ angular.module('ptAnywhere')
         self.message = 'blablabla';
 
         api.startSession($routeParams.id);
-        api.getNetwork()
+        api.getNetwork(function(errorExplanation) {
+                self.message = errorExplanation;
+            })
             .then(function(network) {
                 console.log('Llego!', network);
                 mapData.load(network);
