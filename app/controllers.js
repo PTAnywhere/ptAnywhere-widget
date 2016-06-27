@@ -12,18 +12,16 @@ angular.module('ptAnywhere')
         var self = this;
         self.baseUrl = baseUrl;  // FIXME An URL with the {{ baseUrl }} is going to be loaded before this is set!
         self.loading = loc.network.loading;
-        self.message = 'blablabla';
+        self.message = '';
 
         api.startSession($routeParams.id);
         api.getNetwork(function(errorExplanation) {
                 self.message = errorExplanation;
             })
             .then(function(network) {
-                console.log('Llego!', network);
                 mapData.load(network);
                 $location.path('/s/' + $routeParams.id);
             }, function(response) {
-                console.log(response);
                 $location.path('/not-found');
             });
     }])
@@ -34,6 +32,6 @@ angular.module('ptAnywhere')
         if (!mapData.isLoaded()) {
             $location.path('/loading/' + $routeParams.id);
         } else {
-            self.network = mapData.getNodes();
+            //self.network = mapData;
         }
     }]);

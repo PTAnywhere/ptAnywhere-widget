@@ -32,6 +32,6 @@ angular.module('ptAnywhere', ['ngRoute'])
         }).when('/s/:id', {
             controller: 'WidgetController',
             controllerAs: 'widget',
-            template: '<div class="network networkMap" ng-model="widget.network"></div><div class="creation-menu"></div>'
+            template: '<div class="network networkMap" icons-src="' + baseUrl + '/images/"></div><div class="creation-menu"></div>'
         }).otherwise('/');
     }]);

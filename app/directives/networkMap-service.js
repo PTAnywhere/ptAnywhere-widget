@@ -21,6 +21,9 @@ angular.module('ptAnywhere')
             },
             getNodes: function() {
                 return nodes;
+            },
+            getEdges: function() {
+                return edges;
             }
         };
     }]);
