@@ -1,38 +1,37 @@
 angular.module('ptAnywhere')
     .directive('cmdDialog', ['locale_en', 'baseUrl', function(res, baseUrl) {
-        var network;
-
-        /*function setBody(htmlSnippet) {
-            $('.modal-body', this.selector).html(htmlSnippet);
-        }*/
-
         return {
             restrict: 'C',
             scope: {
-                open: '='//,
-                //backdrop: '='
+                open: '=',
+                backdrop: '@'
             },
             templateUrl: baseUrl + '/html/cmd-dialog.html',
             link: function($scope, $element, $attrs) {
                 var container = $($element.find('div')[0]);
+                // TODO Implement this when backdropArea has been specified.
+                /*backdrop: 'static',
+                  backdropArea: '.widget'*/
+                /*if (this.options.backdrop && this.bdArea !== null) {
+                    $('.modal-backdrop').appendTo(this.bdArea);
+                }*/
                 var options = {
                     backdrop: ('backdrop' in $scope) && ($scope.backdrop==='true')
                 };
 
                 $scope.title = res.commandLineDialog.title;
-                $scope.open = function(endpoint) {
-                    $('iframe.terminal', container).attr('src', endpoint);
-                    $(container).modal(options);
-                    $(container).modal('show');
-                    /*if (this.options.backdrop && this.bdArea !== null) {
-                        $('.modal-backdrop').appendTo(this.bdArea);
-                    }*/
-                };
-                /*$element.on('hidden.bs.modal', function (e) {
-                    // TODO not destroy and have many hidden modals to not remove previous interactions.
-                    //setBody('');  // To make sure that no iframe is left open after the modal is closed.
-                });*/
 
+                $scope.open = function(endpoint) {
+                    var iframe = $('iframe.terminal', container);
+                    iframe.attr('src', endpoint);
+                    iframe.on('load', function(){
+                        console.log('LOADED');
+
+                        // To make sure that a previously loaded iframe is not shown while the new one is loaded.
+                        container.modal(options);
+                        container.modal('show');
+                    });
+                };
             }
         };
     }]);
