@@ -33,7 +33,7 @@ gulp.task('test', function (done) {
 });
 
 gulp.task('concat', function (cb) {
-   return gulp.src(SRC)
+   return gulp.src(['!../app/widget.js', '!../app/console.js', SRC])
       .pipe(plugins.concat(DASHBOARD_JS))
       // We write it to DIST because we will not use it afterwards.
       .pipe(gulp.dest(TMP));

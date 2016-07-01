@@ -30,8 +30,6 @@ angular.module('ptAnywhere', ['ngRoute'])
         }).when('/loading/:id', {
             templateUrl: baseUrl + '/html/loading.html'
         }).when('/s/:id', {
-            controller: 'WidgetController',
-            controllerAs: 'widget',
-            template: '<div class="network networkMap" icons-src="' + baseUrl + '/images/"></div><div class="creation-menu"></div>'
+            templateUrl: baseUrl + '/html/main-widget.html'
         }).otherwise('/');
     }]);

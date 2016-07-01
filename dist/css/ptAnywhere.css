@@ -34,7 +34,7 @@
 
 /*** Network map ***/
 
-.widget>div.ng-scope {
+.widget div.ng-scope {
   height: 100%;
 }
 

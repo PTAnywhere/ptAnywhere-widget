@@ -1,0 +1,11 @@
+<div ng-controller="WidgetController as widget">
+    <div class="network networkMap" icons-src="{{ widget.iconsPath }}"
+         on-double-click="widget.openConsole(endpoint)"
+         on-add-device="widget.onAddDevice"
+         on-add-link="widget.onAddLink"
+         on-edit-device="widget.onEditDevice"
+         on-delete-device="widget.onDeleteDevice"
+         on-delete-link="widget.onDeleteLink"></div>
+    <div class="creation-menu"></div>
+    <div class="cmd-dialog" open="widget.openCmdModal"></div>
+</div>

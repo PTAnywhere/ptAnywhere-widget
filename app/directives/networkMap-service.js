@@ -19,8 +19,17 @@ angular.module('ptAnywhere')
             isLoaded: function() {
                 return loaded;
             },
+            getNode: function(nodeId) {
+                return nodes.get(nodeId);
+            },
+            updateNode: function(node) {
+                nodes.update(node);
+            },
             getNodes: function() {
                 return nodes;
+            },
+            getEdge: function(edgeId) {
+                return edges.get(edgeId);
             },
             getEdges: function() {
                 return edges;
