@@ -2,10 +2,17 @@
     <div class="network networkMap" icons-src="{{ widget.iconsPath }}"
          on-double-click="widget.openConsole(endpoint)"
          on-add-device="widget.onAddDevice"
-         on-add-link="widget.onAddLink"
+         on-add-link="widget.onAddLink(fromDevice, toDevice)"
          on-edit-device="widget.onEditDevice"
          on-delete-device="widget.onDeleteDevice"
          on-delete-link="widget.onDeleteLink"></div>
     <div class="creation-menu"></div>
     <div class="cmd-dialog" open="widget.openCmdModal" backdrop="true"></div>
+    <div ng-controller="LinkController as link">
+        <div class="link-dialog" open="widget.openAddLinkModal" backdrop="true" init="link.load()"
+             from-device="link.fromDevice" to-device="link.toDevice"
+             from-ifaces="link.fromInterfaces" to-ifaces="link.toInterfaces"
+             from-iface="link.selectedFromIface" to-iface="link.selectedToIface"
+             on-submit="link.submit()"></div>
+    </div>
 </div>

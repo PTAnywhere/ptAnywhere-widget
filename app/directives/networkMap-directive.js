@@ -72,7 +72,7 @@ angular.module('ptAnywhere')
                 addEdge = function(data, callback) {
                     var fromDevice = mapData.getNode(data.from);
                     var toDevice = mapData.getNode(data.to);
-                    $scope.onAddLink(fromDevice, toDevice);
+                    $scope.onAddLink({fromDevice: fromDevice, toDevice: toDevice});
                 };
             }
             if ('onEditDevice' in $scope) {

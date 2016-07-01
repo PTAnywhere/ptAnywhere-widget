@@ -28,6 +28,12 @@ angular.module('ptAnywhere')
                 HttpRetry.setExplainer(errorExplainer);
                 return $http.get(sessionUrl + '/network', {timeout: 2000})
                             .then(ifSuccess, HttpRetry.responseError);
+            },
+            getAvailablePorts: function(device) {
+                return $http.get(device.url + 'ports?free=true')
+                            .then(function(response) {
+                                return response.data;
+                            });
             }
         };
     }])

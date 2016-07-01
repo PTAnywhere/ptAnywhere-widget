@@ -25,15 +25,14 @@ angular.module('ptAnywhere')
                 $location.path('/not-found');
             });
     }])
-    .controller('WidgetController', ['$location', '$routeParams', 'baseUrl', 'PTAnywhereAPIService', 'NetworkMapData',
-                                      function($location, $routeParams, baseUrl, api, mapData) {
+    .controller('WidgetController', ['$location', '$routeParams', 'baseUrl', 'NetworkMapData',
+                                      function($location, $routeParams, baseUrl, mapData) {
         var self = this;
 
         if (!mapData.isLoaded()) {
             $location.path('/loading/' + $routeParams.id);
         } else {
             self.iconsPath =  baseUrl + '/images/';
-            //self.network = mapData;
         }
 
         self.openConsole = function(consoleEndpoint) {
@@ -41,7 +40,12 @@ angular.module('ptAnywhere')
             self.openCmdModal(endpoint);  // Set in the controller
         };
         self.onAddDevice = function(x, y) {};
-        self.onAddLink = function(fromDevice, toDevice) {};
+        self.onAddLink = function(fromDevice, toDevice) {
+            // Set in the controller
+            self.openAddLinkModal(fromDevice, toDevice, function(newLink, toLabel, fromLabel) {  // If success...
+                mapData.connect(fromDevice, toDevice, newLink.id, newLink.url, toLabel, fromLabel);
+            });
+        };
         self.onEditDevice = function(node) {};
         self.onDeleteDevice = function(node) {};
         self.onDeleteLink = function(edge) {};

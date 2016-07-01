@@ -1,0 +1,28 @@
+<form name="link-devices">
+    <div ng-show="show.loading">{{ locale.loadingInfo }}</div>
+    <div ng-show="show.loaded">
+        <p>{{ locale.linkDialog.select }}</p>
+        <div class="clearfix form-group">
+            <label for="{{modal.id}}FromIface" class="col-md-3 fromDeviceName">{{ fromDeviceName }}</label>
+            <div class="col-md-9">
+                <p ng-if="fromIfaces === null">{{ locale.loading }}</p>
+                <select ng-if="fromIfaces !== null" id="{{modal.id}}FromIface" class="form-control" size="1"
+                        ng-model="fromIface" ng-options="iface.url as iface.portName for iface in fromIfaces">
+                </select>
+            </div>
+        </div>
+        <div class="clearfix form-group">
+            <label for="{{modal.id}}ToIface" class="col-md-3 toDeviceName">{{ toDeviceName }}</label>
+            <div class="col-md-9">
+                <p ng-if="toIfaces === null">{{ locale.loading }}</p>
+                <select ng-if="toIfaces !== null" id="{{modal.id}}ToIface" class="form-control" size="1"
+                        ng-model="toIface" ng-options="iface.url as iface.portName for iface in toIfaces">
+                </select>
+            </div>
+        </div>
+    </div>
+    <div ng-show="show.error">
+        <p>{{ locale.linkDialog.error }}</p>
+        <p>{{ errorMsg }}</p>
+    </div>
+</form>
