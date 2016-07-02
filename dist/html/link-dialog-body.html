@@ -7,7 +7,7 @@
             <div class="col-md-9">
                 <p ng-if="fromIfaces === null">{{ locale.loading }}</p>
                 <select ng-if="fromIfaces !== null" id="{{modal.id}}FromIface" class="form-control" size="1"
-                        ng-model="fromIface" ng-options="iface.url as iface.portName for iface in fromIfaces">
+                        ng-model="fromIface" ng-options="iface.portName for iface in fromIfaces">
                 </select>
             </div>
         </div>
@@ -16,7 +16,7 @@
             <div class="col-md-9">
                 <p ng-if="toIfaces === null">{{ locale.loading }}</p>
                 <select ng-if="toIfaces !== null" id="{{modal.id}}ToIface" class="form-control" size="1"
-                        ng-model="toIface" ng-options="iface.url as iface.portName for iface in toIfaces">
+                        ng-model="toIface" ng-options="iface.portName for iface in toIfaces">
                 </select>
             </div>
         </div>

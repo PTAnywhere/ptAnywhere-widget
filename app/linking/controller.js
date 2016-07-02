@@ -19,6 +19,8 @@ angular.module('ptAnywhere')
                         .then(function(arrayOfResponses) {
                             self.fromInterfaces = arrayOfResponses[0];
                             self.toInterfaces = arrayOfResponses[1];
+                            self.selectedFromIface = self.fromInterfaces[0];
+                            self.selectedToIface = self.toInterfaces[0];
                             if(!$scope.$$phase) {
                                 $scope.$apply();
                             }
@@ -29,6 +31,6 @@ angular.module('ptAnywhere')
         };
 
         self.submit = function() {
-            console.log('BLAH', self.selectedFromIface, self.selectedToIface);
+            console.log('Connecting...', self.selectedFromIface, self.selectedToIface);
         };
     }]);
