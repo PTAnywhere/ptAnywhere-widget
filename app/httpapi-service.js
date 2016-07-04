@@ -49,16 +49,11 @@ angular.module('ptAnywhere')
             },
             removeLink: function(link) {
                 // FIXME issue #4.
-                return getJSON(link.url, this.customSettings)
-                    .fail(function(data) {
-                      console.error('Something went wrong getting this link: ' + link.url + '.');
-                    })
-                    .then(function(data) {
-                      return deleteHttp(data.endpoints[0] + 'link', this.customSettings)
-                          .fail(function() {
-                            console.error('Something went wrong in the link removal.');
-                          });
-                    });
+                return $http.get(link.url)
+                        .then(function(response) {
+                            // Any of the two endpoints would work for us.
+                            return $http.delete(response.data.endpoints[0] + 'link');
+                        });
             }
         };
     }])
