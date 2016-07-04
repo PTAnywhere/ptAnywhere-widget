@@ -6,8 +6,6 @@ angular.module('ptAnywhere')
         self.toDevice = null;
         self.fromInterfaces = null;
         self.toInterfaces = null;
-        self.selectedFromIface = null;
-        self.selectedToIface = null;
 
         self.load = function() {
             if (self.fromDevice!==null && self.toDevice!==null) {
@@ -19,8 +17,6 @@ angular.module('ptAnywhere')
                         .then(function(arrayOfResponses) {
                             self.fromInterfaces = arrayOfResponses[0];
                             self.toInterfaces = arrayOfResponses[1];
-                            self.selectedFromIface = self.fromInterfaces[0];
-                            self.selectedToIface = self.toInterfaces[0];
                             if(!$scope.$$phase) {
                                 $scope.$apply();
                             }
@@ -31,6 +27,6 @@ angular.module('ptAnywhere')
         };
 
         self.submit = function() {
-            console.log('Connecting...', self.selectedFromIface, self.selectedToIface);
+            console.log('Connecting...', self.selected.fromIface, self.selected.toIface);
         };
     }]);

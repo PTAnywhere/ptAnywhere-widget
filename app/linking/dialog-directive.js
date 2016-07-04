@@ -23,8 +23,11 @@ angular.module('ptAnywhere')
                 error: false
             };
             $scope.errorMsg = '';
-            $scope.selectedFromIface = null;
-            $scope.selectedToIface = null;
+            // I messed up with the inherited scope and the user-updated ng-model value when I tried to use two
+            // different variables for "selected".
+            // This a (not so ideal) solution that works (i.e., updates the value in all the scopes)
+            // because the value is hold in a reference inside the object passed through different scopes.
+            $scope.selected = {fromIface: null, toIface: null},
             setDevices($scope, null, null);
         }
 
@@ -58,9 +61,8 @@ angular.module('ptAnywhere')
                 fromDevice: '=',
                 toDevice: '=',
                 fromIfaces: '=',
-                fromIface: '=',  // selected one
                 toIfaces: '=',
-                toIface: '=',  // selected one
+                selected: '=',
                 onSubmit: '&'
             },
             templateUrl: baseUrl + '/html/default-dialog.html',
@@ -82,6 +84,18 @@ angular.module('ptAnywhere')
                     container.modal(options);
                     container.modal('show');
                 };
+
+                $scope.$watch('fromIfaces', function(newValue, oldValue) {
+                    if($scope.fromIfaces !== null) {
+                        $scope.selected.fromIface = $scope.fromIfaces[0];
+                    }
+                });
+
+                $scope.$watch('toIfaces', function(newValue, oldValue) {
+                    if($scope.toIfaces !== null) {
+                        $scope.selected.toIface = $scope.toIfaces[0];
+                    }
+                });
 
                 $scope.$watchGroup(['fromIfaces', 'toIfaces'], function(newValues, oldValues) {
                     for(var i in newValues) {
