@@ -2,6 +2,60 @@ angular.module('ptAnywhere')
     .directive('networkMap', ['locale_en', 'baseUrl', 'NetworkMapData', function(res, baseUrl, mapData) {
         var network;
 
+        function createNetworkMap($scope, $element) {
+            var visData = {
+                // TODO I would prefer to pass both as attrs instead of as a service.
+                // However, right now this is the most straightforward change.
+                // Since for passing it as attrs I would need to be an object and I am not using vis.DataSet.
+                nodes: mapData.getNodes(),
+                edges: mapData.getEdges()
+            };
+            var options = {
+                nodes: {
+                    physics: false,
+                    font: '14px verdana black',
+                },
+                edges: {
+                    width: 3,
+                    selectionWidth: 1.4,
+                    color: {
+                        color:'#606060',
+                        highlight:'#000000',
+                        hover: '#000000'
+                    }
+                 },
+                groups: {
+                    cloudDevice : {
+                        shape : 'image',
+                        image : $scope.iconsSrc + 'cloud.png',
+                        size: 50,
+                    },
+                    routerDevice : {
+                        shape : 'image',
+                        image : $scope.iconsSrc + 'router_cropped.png',
+                        size: 45,
+                    },
+                    switchDevice : {
+                        shape : 'image',
+                        image : $scope.iconsSrc + 'switch_cropped.png',
+                        size: 35,
+                    },
+                    pcDevice : {
+                        shape : 'image',
+                        image : $scope.iconsSrc + 'pc_cropped.png',
+                        size: 45,
+                    }
+                },
+                manipulation: getManipulationOptions($scope),
+                locale: 'ptAnywhere',
+                locales: {
+                    ptAnywhere: res.manipulationMenu
+                }
+            };
+            var container = $element.find('div')[0];
+            return new vis.Network(container, visData, options);
+        }
+
         function getSelectedNode() {
             var selected = network.getSelection();
             if (selected.nodes.length !== 1) { // Only if just one is selected
@@ -85,9 +139,11 @@ angular.module('ptAnywhere')
                 deleteNode = function(data, callback) {
                     // Always (data.nodes.length>0) && (data.edges.length==0)
                     // FIXME There might be more than a node selected...
-                    $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])});
-                    // This callback is important, otherwise it received 3 consecutive onDelete events.
-                    callback(data);
+                    $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])})
+                            .then(function() {
+                                // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                callback(data);
+                            });
                 };
             }
             if ('onDeleteLink' in $scope) {
@@ -96,9 +152,11 @@ angular.module('ptAnywhere')
                     // TODO There might be more than an edge selected...
                     var edge = mapData.getEdge(data.edges[0]);
                     hideEndpointsInEdge(edge);
-                    $scope.onDeleteLink(edge);
-                    // This callback is important, otherwise it received 3 consecutive onDelete events.
-                    callback(data);
+                    $scope.onDeleteLink({link: edge})
+                            .then(function() {
+                                // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                callback(data);
+                            });
                 };
             }
 
@@ -126,80 +184,35 @@ angular.module('ptAnywhere')
             },
             template: '<div class="map"></div>',
             link: function($scope, $element, $attrs) {
-                var visData = {
-                    // TODO I would prefer to pass both as attrs instead of as a service.
-                    // However, right now this is the most straightforward change.
-                    // Since for passing it as attrs I would need to be an object and I am not using vis.DataSet.
-                    nodes: mapData.getNodes(),
-                    edges: mapData.getEdges()
-                };
-                var options = {
-                    nodes: {
-                        physics: false,
-                        font: '14px verdana black',
-                    },
-                    edges: {
-                        width: 3,
-                        selectionWidth: 1.4,
-                        color: {
-                            color:'#606060',
-                            highlight:'#000000',
-                            hover: '#000000'
-                        }
-                     },
-                    groups: {
-                        cloudDevice : {
-                            shape : 'image',
-                            image : $scope.iconsSrc + 'cloud.png',
-                            size: 50,
-                        },
-                        routerDevice : {
-                            shape : 'image',
-                            image : $scope.iconsSrc + 'router_cropped.png',
-                            size: 45,
-                        },
-                        switchDevice : {
-                            shape : 'image',
-                            image : $scope.iconsSrc + 'switch_cropped.png',
-                            size: 35,
-                        },
-                        pcDevice : {
-                            shape : 'image',
-                            image : $scope.iconsSrc + 'pc_cropped.png',
-                            size: 45,
-                        }
-                    },
-                    manipulation: getManipulationOptions($scope),
-                    locale: 'ptAnywhere',
-                    locales: {
-                        ptAnywhere: res.manipulationMenu
-                    }
-                };
-                var container = $element.find('div')[0];
-                network = new vis.Network(container, visData, options);
+                if ('iconsSrc' in $attrs && $scope.iconsSrc !== '') {
+                    network = createNetworkMap($scope, $element);
+                    $scope.$on('$destroy', function() {
+                        network.destroy();
+                    });
 
-
-                network.on('select', function(event) {
-                    if ( isOnlyOneEdgeSelected(event) ) {
-                        var edge = edges.get(event.edges[0]);
-                        showEndpointsInEdge(edge);
-                    } else if ( isNodeSelected(event) ) {
-                        hideEndpointsInSelectedEdges(event);
-                    }
-                });
-                network.on('deselectEdge', function(event) {
-                    if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
-                        hideEndpointsInSelectedEdges(event.previousSelection);
-                    }
-                });
-                if ('onDoubleClick' in $scope) {
-                    network.on('doubleClick', function() {
-                        var selected = getSelectedNode();
-                        if (selected !== null) {
-                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                    network.on('select', function(event) {
+                        if ( isOnlyOneEdgeSelected(event) ) {
+                            var edge = mapData.getEdge(event.edges[0]);
+                            showEndpointsInEdge(edge);
+                        } else if ( isNodeSelected(event) ) {
+                            hideEndpointsInSelectedEdges(event);
                         }
                     });
+                    network.on('deselectEdge', function(event) {
+                        if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
+                            hideEndpointsInSelectedEdges(event.previousSelection);
+                        }
+                    });
+                    if ('onDoubleClick' in $scope) {
+                        network.on('doubleClick', function() {
+                            var selected = getSelectedNode();
+                            if (selected !== null) {
+                                $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                            }
+                        });
+                    }
                 }
+
             }
         };
     }]);
