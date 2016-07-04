@@ -85,7 +85,7 @@ angular.module('ptAnywhere')
                 deleteNode = function(data, callback) {
                     // Always (data.nodes.length>0) && (data.edges.length==0)
                     // FIXME There might be more than a node selected...
-                    $scope.onDeleteDevice(mapData.getNode(data.nodes[0]));
+                    $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])});
                     // This callback is important, otherwise it received 3 consecutive onDelete events.
                     callback(data);
                 };

@@ -25,8 +25,8 @@ angular.module('ptAnywhere')
                 $location.path('/not-found');
             });
     }])
-    .controller('WidgetController', ['$location', '$routeParams', 'baseUrl', 'NetworkMapData',
-                                      function($location, $routeParams, baseUrl, mapData) {
+    .controller('WidgetController', ['$location', '$routeParams', 'baseUrl', 'NetworkMapData', 'PTAnywhereAPIService',
+                                      function($location, $routeParams, baseUrl, mapData, api) {
         var self = this;
 
         if (!mapData.isLoaded()) {
@@ -44,6 +44,11 @@ angular.module('ptAnywhere')
             self.openAddLinkModal(fromDevice, toDevice);
         };
         self.onEditDevice = function(node) {};
-        self.onDeleteDevice = function(node) {};
+        self.onDeleteDevice = function(node) {
+            api.removeDevice(node)
+                .catch(function(error) {
+                    console.error('Device removal.', error);
+                });
+        };
         self.onDeleteLink = function(edge) {};
     }]);

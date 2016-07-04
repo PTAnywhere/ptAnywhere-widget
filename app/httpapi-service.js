@@ -35,6 +35,9 @@ angular.module('ptAnywhere')
                                 return response.data;
                             });
             },
+            removeDevice: function(device) {
+                return $http.delete(device.url);
+            },
             createLink: function(fromPortURL, toPortURL) {
                 var modification = {
                   toPort: toPortURL
