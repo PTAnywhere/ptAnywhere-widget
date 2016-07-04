@@ -27,6 +27,16 @@ angular.module('ptAnywhere')
         };
 
         self.submit = function() {
-            console.log('Connecting...', self.selected.fromIface, self.selected.toIface);
+            var fromIf = self.selected.fromIface;
+            var toIf = self.selected.toIface;
+            console.log('Connecting...', fromIf, toIf);
+            api.createLink(fromIf.url, toIf.url)
+               .then(function(newLink) {
+                    mapData.connect(self.fromDevice, self.toDevice, newLink.id, newLink.url,
+                                    fromIf.portName, toIf.portName);
+               }, function(error) {
+                    self.submitError = 'Link could not be created (' + error.statusText + ').';
+                    console.error('Link creation', error);
+               });
         };
     }]);

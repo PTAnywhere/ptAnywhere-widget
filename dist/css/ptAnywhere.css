@@ -93,6 +93,10 @@
 
 /*** MENUs and DIALOGs ***/
 
+p.bg-danger {
+    padding: 15px;
+}
+
 /**** Network edit menu ****/
 
 div.vis-network div.vis-edit-mode {

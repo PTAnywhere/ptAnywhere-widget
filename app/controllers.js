@@ -41,10 +41,7 @@ angular.module('ptAnywhere')
         };
         self.onAddDevice = function(x, y) {};
         self.onAddLink = function(fromDevice, toDevice) {
-            // Set in the controller
-            self.openAddLinkModal(fromDevice, toDevice, function(newLink, toLabel, fromLabel) {  // If success...
-                mapData.connect(fromDevice, toDevice, newLink.id, newLink.url, toLabel, fromLabel);
-            });
+            self.openAddLinkModal(fromDevice, toDevice);
         };
         self.onEditDevice = function(node) {};
         self.onDeleteDevice = function(node) {};

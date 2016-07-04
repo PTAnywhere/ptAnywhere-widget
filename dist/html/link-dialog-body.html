@@ -22,9 +22,9 @@
                             ng-options="iface.portName for iface in toIfaces">
                     </select>
                 </div>
-                <p>{{toIface}}</p>
             </div>
         </div>
+        <p ng-if="submitError !== null" class="clearfix bg-danger">{{submitError}}</p>
     </div>
     <div ng-show="show.error">
         <p>{{ locale.linkDialog.error }}</p>

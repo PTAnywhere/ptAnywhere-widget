@@ -34,6 +34,28 @@ angular.module('ptAnywhere')
                             .then(function(response) {
                                 return response.data;
                             });
+            },
+            createLink: function(fromPortURL, toPortURL) {
+                var modification = {
+                  toPort: toPortURL
+                };
+                return $http.post(fromPortURL + 'link', modification)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            removeLink: function(link) {
+                // FIXME issue #4.
+                return getJSON(link.url, this.customSettings)
+                    .fail(function(data) {
+                      console.error('Something went wrong getting this link: ' + link.url + '.');
+                    })
+                    .then(function(data) {
+                      return deleteHttp(data.endpoints[0] + 'link', this.customSettings)
+                          .fail(function() {
+                            console.error('Something went wrong in the link removal.');
+                          });
+                    });
             }
         };
     }])

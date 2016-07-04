@@ -22,12 +22,12 @@ angular.module('ptAnywhere')
                 loaded: false,
                 error: false
             };
-            $scope.errorMsg = '';
+            $scope.submitError = null;
             // I messed up with the inherited scope and the user-updated ng-model value when I tried to use two
             // different variables for "selected".
             // This a (not so ideal) solution that works (i.e., updates the value in all the scopes)
             // because the value is hold in a reference inside the object passed through different scopes.
-            $scope.selected = {fromIface: null, toIface: null},
+            $scope.selected = {fromIface: null, toIface: null};
             setDevices($scope, null, null);
         }
 
@@ -63,7 +63,8 @@ angular.module('ptAnywhere')
                 fromIfaces: '=',
                 toIfaces: '=',
                 selected: '=',
-                onSubmit: '&'
+                onSubmit: '&',
+                submitError: '='
             },
             templateUrl: baseUrl + '/html/default-dialog.html',
             link: function($scope, $element, $attrs) {
