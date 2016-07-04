@@ -2,6 +2,7 @@ angular.module('ptAnywhere')
     .factory('PTAnywhereAPIService', ['$http', 'apiUrl', 'HttpRetry',
                                         function($http, apiUrl, HttpRetry) {
         var sessionUrl = '';
+        var httpDefaults = {timeout: 2000};
         return {
             createSession: function(fileToOpen, previousSessionId) {
                 var newSession = {fileUrl: fileToOpen};
@@ -26,30 +27,35 @@ angular.module('ptAnywhere')
                 var ifSuccess = function(response) { return response.data; };
                 HttpRetry.setSuccess(ifSuccess);
                 HttpRetry.setExplainer(errorExplainer);
-                return $http.get(sessionUrl + '/network', {timeout: 2000})
+                return $http.get(sessionUrl + '/network', httpDefaults)
                             .then(ifSuccess, HttpRetry.responseError);
             },
             getAvailablePorts: function(device) {
-                return $http.get(device.url + 'ports?free=true')
+                return $http.get(device.url + 'ports?free=true', httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            addDevice: function(newDevice) {
+                return $http.post(sessionUrl + '/devices', newDevice, httpDefaults)
                             .then(function(response) {
                                 return response.data;
                             });
             },
             removeDevice: function(device) {
-                return $http.delete(device.url);
+                return $http.delete(device.url, httpDefaults);
             },
             createLink: function(fromPortURL, toPortURL) {
                 var modification = {
                   toPort: toPortURL
                 };
-                return $http.post(fromPortURL + 'link', modification)
+                return $http.post(fromPortURL + 'link', modification, httpDefaults)
                             .then(function(response) {
                                 return response.data;
                             });
             },
             removeLink: function(link) {
-                // FIXME issue #4.
-                return $http.get(link.url)
+                return $http.get(link.url, httpDefaults)
                         .then(function(response) {
                             // Any of the two endpoints would work for us.
                             return $http.delete(response.data.endpoints[0] + 'link');

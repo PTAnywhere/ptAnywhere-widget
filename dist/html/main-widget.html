@@ -1,13 +1,19 @@
 <div ng-controller="WidgetController as widget">
     <div class="network networkMap" icons-src="{{ widget.iconsPath }}"
          on-double-click="widget.openConsole(endpoint)"
-         on-add-device="widget.onAddDevice"
+         on-add-device="widget.onAddDevice(x, y)"
          on-add-link="widget.onAddLink(fromDevice, toDevice)"
          on-edit-device="widget.onEditDevice(device)"
          on-delete-device="widget.onDeleteDevice(device)"
          on-delete-link="widget.onDeleteLink(link)"></div>
     <div class="creation-menu"></div>
     <div class="cmd-dialog" open="widget.openCmdModal" backdrop="true"></div>
+    <div ng-controller="CreationController as create">
+        <div class="creation-dialog" open="widget.openAddDeviceModal" backdrop="true" close="create.close"
+             device-types="create.allowedTypes" new-device="create.device"
+             on-submit="create.submit()" submit-error="create.submitError">
+        </div>
+    </div>
     <div ng-controller="LinkController as link">
         <div class="link-dialog" open="widget.openAddLinkModal" backdrop="true" init="link.load()"
              from-device="link.fromDevice" to-device="link.toDevice"

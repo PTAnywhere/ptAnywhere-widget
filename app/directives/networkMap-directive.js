@@ -119,7 +119,7 @@ angular.module('ptAnywhere')
 
             if ('onAddDevice' in $scope) {
                 addNode = function(data, callback) {
-                    $scope.onAddDevice(data.x, data.y);
+                    $scope.onAddDevice({x: data.x, y: data.y});
                 };
             }
             if ('onAddLink' in $scope) {

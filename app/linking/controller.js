@@ -1,6 +1,6 @@
 angular.module('ptAnywhere')
-    .controller('LinkController', ['$scope', 'baseUrl', 'PTAnywhereAPIService', 'NetworkMapData',
-                                    function($scope, baseUrl, api, mapData) {
+    .controller('LinkController', ['$scope', 'PTAnywhereAPIService', 'NetworkMapData',
+                                    function($scope, api, mapData) {
         var self = this;
         self.fromDevice = null;
         self.toDevice = null;
@@ -30,6 +30,7 @@ angular.module('ptAnywhere')
             var fromIf = self.selected.fromIface;
             var toIf = self.selected.toIface;
             console.log('Connecting...', fromIf, toIf);
+            self.submitError = null;
             api.createLink(fromIf.url, toIf.url)
                .then(function(newLink) {
                    mapData.connect(self.fromDevice, self.toDevice, newLink.id, newLink.url,

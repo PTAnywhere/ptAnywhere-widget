@@ -1,6 +1,5 @@
 angular.module('ptAnywhere')
     .directive('linkDialog', ['locale_en', 'baseUrl', function(res, baseUrl) {
-        var success = null;
 
         function setDevices($scope, fromDevice, toDevice) {
             $scope.fromDevice = fromDevice;
@@ -53,6 +52,7 @@ angular.module('ptAnywhere')
         }
 
         return {
+            templateUrl: baseUrl + '/html/default-dialog.html',
             restrict: 'C',
             scope: {
                 open: '=',  // initialized here
@@ -66,7 +66,6 @@ angular.module('ptAnywhere')
                 onSubmit: '&',
                 submitError: '='
             },
-            templateUrl: baseUrl + '/html/default-dialog.html',
             link: function($scope, $element, $attrs) {
                 initDefaults($scope);
 

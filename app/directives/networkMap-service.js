@@ -25,6 +25,9 @@ angular.module('ptAnywhere')
             updateNode: function(node) {
                 nodes.update(node);
             },
+            addNode: function(node) {
+                return nodes.add(node);
+            },
             getNodes: function() {
                 return nodes;
             },

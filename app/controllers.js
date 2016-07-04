@@ -38,7 +38,9 @@ angular.module('ptAnywhere')
                 var endpoint = 'console?endpoint=' + consoleEndpoint;
                 self.openCmdModal(endpoint);  // Set in the controller
             };
-            self.onAddDevice = function(x, y) {};
+            self.onAddDevice = function(x, y) {
+                self.openAddDeviceModal(x, y);
+            };
             self.onAddLink = function(fromDevice, toDevice) {
                 self.openAddLinkModal(fromDevice, toDevice);
             };
