@@ -1,8 +1,8 @@
 angular.module('ptAnywhere')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale_en', 'baseUrl',
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale_en',
                                     'PTAnywhereAPIService', 'device',
                                      // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, locale, baseUrl, api, deviceToEdit) {
+                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
         $scope.submitError = null;
         $scope.interfaces = null;
@@ -16,7 +16,7 @@ angular.module('ptAnywhere')
         $scope.modal = {
             id: 'modification-dialog',
             title: locale.modificationDialog.title,
-            bodyTemplate: baseUrl + '/html/update-dialog-body.html',
+            bodyTemplate: 'update-dialog-body.html',
             hasSubmit: true
         };
         $scope.device = {

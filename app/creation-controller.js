@@ -1,13 +1,13 @@
 angular.module('ptAnywhere')
-    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale_en',  'baseUrl',
+    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale_en',
                                         'PTAnywhereAPIService', 'position',
-                                    function($log, $scope, $uibModalInstance, locale, baseUrl, api, position) {
+                                    function($log, $scope, $uibModalInstance, locale, api, position) {
         $scope.submitError = null;
         $scope.locale = locale;
         $scope.modal = {
             id: 'creationDialog',
             title: locale.creationDialog.title,
-            bodyTemplate: baseUrl + '/html/creation-dialog-body.html',
+            bodyTemplate: 'creation-dialog-body.html',
             hasSubmit: true
         };
         $scope.deviceTypes = [

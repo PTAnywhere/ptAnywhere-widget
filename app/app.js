@@ -20,16 +20,16 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
     /*.config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('HttpErrorsInterceptor');
     }])*/
-    .config(['$routeProvider', 'baseUrl', function($routeProvider, baseUrl) {
+    .config(['$routeProvider', function($routeProvider) {
         // configure the routing rules here
         $routeProvider.when('/', {
             template: '',
             controller: 'SessionCreatorController'
         }).when('/not-found', {
-            templateUrl: baseUrl + '/html/not-found.html'
+            templateUrl: 'not-found.html'
         }).when('/loading/:id', {
-            templateUrl: baseUrl + '/html/loading.html'
+            templateUrl: 'loading.html'
         }).when('/s/:id', {
-            templateUrl: baseUrl + '/html/main-widget.html'
+            templateUrl: 'main-widget.html'
         }).otherwise('/');
     }]);

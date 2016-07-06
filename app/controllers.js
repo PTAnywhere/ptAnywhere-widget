@@ -40,7 +40,7 @@ angular.module('ptAnywhere')
                 var endpoint = 'console?endpoint=' + consoleEndpoint;
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/cmd-dialog.html',
+                    templateUrl: 'cmd-dialog.html',
                     controller: 'CommandLineController',
                     resolve: {
                         endpoint: function () {
@@ -53,7 +53,7 @@ angular.module('ptAnywhere')
             self.onAddDevice = function(x, y) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog.html',
+                    templateUrl: 'default-dialog.html',
                     controller: 'CreationController',
                     resolve: {
                         position: function () {
@@ -69,7 +69,7 @@ angular.module('ptAnywhere')
             self.onAddLink = function(fromDevice, toDevice) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog.html',
+                    templateUrl: 'default-dialog.html',
                     controller: 'LinkController',
                     //size: 'lg',
                     resolve: {
@@ -90,7 +90,7 @@ angular.module('ptAnywhere')
             self.onEditDevice = function(device) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog.html',
+                    templateUrl: 'default-dialog.html',
                     controller: 'UpdateController',
                     //size: 'lg',
                     resolve: {

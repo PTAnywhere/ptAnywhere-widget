@@ -1,8 +1,7 @@
 angular.module('ptAnywhere')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale_en', 'baseUrl',
-                                    'PTAnywhereAPIService', 'fromDevice', 'toDevice',
-                                    function($log, $scope, $uibModalInstance, locale, baseUrl, api,
-                                             fromDevice, toDevice) {
+    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale_en', 'PTAnywhereAPIService',
+                                    'fromDevice', 'toDevice',
+                                    function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;
         $scope.fromDeviceName = fromDevice.label;
         $scope.toDeviceName = toDevice.label;
@@ -15,7 +14,7 @@ angular.module('ptAnywhere')
         $scope.modal = {
             id: 'linkDialog',
             title: locale.linkDialog.title,
-            bodyTemplate: baseUrl + '/html/link-dialog-body.html',
+            bodyTemplate: 'link-dialog-body.html',
             hasSubmit: false
         };
         // I messed up with the inherited scope and the user-updated ng-model value when I tried to use two

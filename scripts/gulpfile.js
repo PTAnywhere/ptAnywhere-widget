@@ -8,10 +8,12 @@ var Server = require('karma').Server;
 
 
 var SRC               = '../app/**/*.js';
+var TEMPLATES         = '../app/templates/*.html';
 var TMP               = 'tmp/';
+var TEMPLATE_JS       = 'templates.js';
 var DIST              = '../dist/';
-var DASHBOARD_JS      = 'ptAnywhere.js';
-var DASHBOARD_MIN_JS  = 'ptAnywhere.min.js';
+var PTANYWHERE_JS      = 'ptAnywhere.js';
+var PTANYWHERE_MIN_JS  = 'ptAnywhere.min.js';
 
 
 
@@ -32,9 +34,16 @@ gulp.task('test', function (done) {
   }, done).start();
 });
 
-gulp.task('concat', function (cb) {
-   return gulp.src(['!../app/widget.js', '!../app/console.js', SRC])
-      .pipe(plugins.concat(DASHBOARD_JS))
+gulp.task('template', function () {
+  var templateCache = plugins.angularTemplatecache;
+  return gulp.src(TEMPLATES)
+    .pipe(templateCache(TEMPLATE_JS, {module: 'ptAnywhere'}))
+    .pipe(gulp.dest(TMP));
+});
+
+gulp.task('concat', ['template'], function (cb) {
+   return gulp.src(['!../app/widget.js', '!../app/console.js', SRC, TMP + TEMPLATE_JS])
+      .pipe(plugins.concat(PTANYWHERE_JS))
       // We write it to DIST because we will not use it afterwards.
       .pipe(gulp.dest(TMP));
 });
@@ -43,9 +52,9 @@ gulp.task('concat', function (cb) {
 // Therefore, if a file named before "app" exists (the module definition is in app.js),
 // it will crash because the module would have not be defined by then.
 gulp.task('minimize', ['concat'], function (cb) {
-   return gulp.src(TMP + '**.js')
+   return gulp.src(TMP + PTANYWHERE_JS)
       .pipe(plugins.uglify())
-      .pipe(plugins.rename(DASHBOARD_MIN_JS))
+      .pipe(plugins.rename(PTANYWHERE_MIN_JS))
       .pipe(gulp.dest(DIST));
 });
 

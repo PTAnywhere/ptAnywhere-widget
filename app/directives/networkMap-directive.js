@@ -1,5 +1,5 @@
 angular.module('ptAnywhere')
-    .directive('networkMap', ['locale_en', 'baseUrl', 'NetworkMapData', function(res, baseUrl, mapData) {
+    .directive('networkMap', ['locale_en', 'NetworkMapData', function(res, mapData) {
         var network;
 
         function createNetworkMap($scope, $element) {
