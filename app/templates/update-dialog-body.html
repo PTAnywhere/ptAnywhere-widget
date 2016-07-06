@@ -10,7 +10,8 @@
         <div class="clearfix form-group"  ng-show="device.defaultGateway !== null">
             <label for="{{ modal.id }}-default-gw" class="col-md-3">{{ locale.modificationDialog.defaultGW }}: </label>
             <div class="col-md-9">
-                <input type="text" ng-model="device.defaultGateway" id="{{ modal.id }}-default-gw" class="form-control" />
+                <input type="text" ng-model="device.defaultGateway" ng-pattern="ipAddrPattern"
+                       id="{{ modal.id }}-default-gw" class="form-control" />
             </div>
         </div>
     </uib-tab>
@@ -31,17 +32,21 @@
                 <div class="clearfix form-group">
                     <label for="{{ modal.id }}-idaddr" class="col-md-3">{{ locale.modificationDialog.ipAddress }}: </label>
                     <div class="col-md-9">
-                        <input type="text" id="{{ modal.id }}-idaddr" class="form-control" ng-model="interface.ipAddr" />
+                        <input type="text" ng-model="interface.ipAddr" ng-pattern="ipAddrPattern"
+                               id="{{ modal.id }}-idaddr" class="form-control" />
                     </div>
                 </div>
                 <div class="clearfix form-group">
                     <label for="{{ modal.id }}-subnet" class="col-md-3">{{ locale.modificationDialog.subnetMask }}: </label>
                     <div class="col-md-9">
-                        <input type="text" id="{{ modal.id }}-subnet" class="form-control"  ng-model="interface.subnet" />
+                        <input type="text"  ng-model="interface.subnet" ng-pattern="ipAddrPattern"
+                               id="{{ modal.id }}-subnet" class="form-control"/>
                     </div>
                 </div>
             </div>
-            <div ng-show="interface.ipAddr === null">{{ locale.modificationDialog.noSettings }}</div>
+            <div class="clearfix form-group" ng-show="interface.ipAddr === null">
+                <p class="col-md-12">{{ locale.modificationDialog.noSettings }}</p>
+            </div>
         </div>
     </uib-tab>
 </uib-tabset>

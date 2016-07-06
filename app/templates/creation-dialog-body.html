@@ -1,21 +1,19 @@
-<form>
-    <fieldset>
-        <div class="clearfix form-group">
-            <label for="{{ modal.id }}Name" class="col-md-3">{{ locale.name }}: </label>
-            <div class="col-md-9">
-                <input type="text" id="{{ modal.id }}Name" class="form-control" ng-model="newDevice.name" />
+<fieldset>
+    <div class="clearfix form-group">
+        <label for="{{ modal.id }}Name" class="col-md-3">{{ locale.name }}: </label>
+        <div class="col-md-9">
+            <input type="text" id="{{ modal.id }}Name" class="form-control" ng-model="newDevice.name" />
+        </div>
+    </div>
+    <div class="clearfix form-group">
+        <label for="{{ modal.id }}Type" class="col-md-3">{{ locale.creationDialog.type }}</label>
+        <div class="col-md-9">
+            <p ng-if="deviceTypes === null">{{ locale.loading }}</p>
+            <div ng-if="deviceTypes !== null">
+                <select id="{{ modal.id }}Type" class="form-control" ng-model="newDevice.type"
+                        ng-options="type.label for type in deviceTypes">
+                </select>
             </div>
         </div>
-        <div class="clearfix form-group">
-            <label for="{{ modal.id }}Type" class="col-md-3">{{ locale.creationDialog.type }}</label>
-            <div class="col-md-9">
-                <p ng-if="deviceTypes === null">{{ locale.loading }}</p>
-                <div ng-if="deviceTypes !== null">
-                    <select id="{{ modal.id }}Type" class="form-control" ng-model="newDevice.type"
-                            ng-options="type.label for type in deviceTypes">
-                    </select>
-                </div>
-            </div>
-        </div>
-    </fieldset>
-</form>
+    </div>
+</fieldset>
