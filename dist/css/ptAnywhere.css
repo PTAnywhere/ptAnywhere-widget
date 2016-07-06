@@ -131,6 +131,14 @@ div.vis-network div.vis-manipulation div.vis-separator-line {
 
 /**** Terminal dialog ****/
 
+.terminal-dialog .modal-dialog {
+  height: 90%;
+}
+
+.terminal-dialog .modal-content {
+  height: 100%;
+}
+
 /* Ugly fix for CSS on the iPad. */
 /*  http://stackoverflow.com/questions/16937070/iframe-size-with-css-on-ios */
 div.iframeWrapper {

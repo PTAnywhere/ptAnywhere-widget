@@ -38,12 +38,22 @@ angular.module('ptAnywhere')
 
             self.openConsole = function(consoleEndpoint) {
                 var endpoint = 'console?endpoint=' + consoleEndpoint;
-                self.openCmdModal(endpoint);  // Set in the controller
+                modalInstance = $uibModal.open({
+                    animation: false,  // TODO true
+                    templateUrl: baseUrl + '/html/cmd-dialog.html',
+                    controller: 'CommandLineController',
+                    resolve: {
+                        endpoint: function () {
+                            return endpoint;
+                        }
+                    },
+                    windowClass: 'terminal-dialog'
+                });
             };
             self.onAddDevice = function(x, y) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    templateUrl: baseUrl + '/html/default-dialog.html',
                     controller: 'CreationController',
                     resolve: {
                         position: function () {
@@ -59,7 +69,7 @@ angular.module('ptAnywhere')
             self.onAddLink = function(fromDevice, toDevice) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    templateUrl: baseUrl + '/html/default-dialog.html',
                     controller: 'LinkController',
                     //size: 'lg',
                     resolve: {
@@ -80,7 +90,7 @@ angular.module('ptAnywhere')
             self.onEditDevice = function(device) {
                 modalInstance = $uibModal.open({
                     animation: false,  // TODO true
-                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    templateUrl: baseUrl + '/html/default-dialog.html',
                     controller: 'UpdateController',
                     //size: 'lg',
                     resolve: {
@@ -94,6 +104,14 @@ angular.module('ptAnywhere')
                     if (changedDevice !== null) {  // If null, it means that the node didn't change
                         mapData.updateNode(changedDevice);
                     }
+                });
+
+                modalInstance.opened.then(function (changedDevice) {
+                    console.log('open');
+                });
+
+                modalInstance.rendered.then(function (changedDevice) {
+                    console.log('render');
                 });
             };
             self.onDeleteDevice = function(node) {
