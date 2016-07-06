@@ -29,6 +29,7 @@ angular.module('ptAnywhere')
                                      'baseUrl', 'NetworkMapData', 'PTAnywhereAPIService',
                                      function($q, $log, $location, $routeParams, $uibModal, baseUrl, mapData, api) {
         var self = this;
+        var modalInstance;
 
         if (!mapData.isLoaded()) {
             $location.path('/loading/' + $routeParams.id);
@@ -46,7 +47,7 @@ angular.module('ptAnywhere')
                 self.openAddLinkModal(fromDevice, toDevice);
             };
             self.onEditDevice = function(device) {
-                var modalInstance = $uibModal.open({
+                modalInstance = $uibModal.open({
                     animation: false,  // TODO true
                     templateUrl: baseUrl + '/html/default-dialog2.html',
                     controller: 'UpdateController',
@@ -59,8 +60,7 @@ angular.module('ptAnywhere')
                 });
 
                 modalInstance.result.then(function (changedDevice) {
-                    if (changedDevice !== null) {
-                        // If null, it means that the node didn't change
+                    if (changedDevice !== null) {  // If null, it means that the node didn't change
                         mapData.updateNode(changedDevice);
                     }
                 });
