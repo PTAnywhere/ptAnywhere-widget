@@ -39,7 +39,6 @@ angular.module('ptAnywhere')
             self.openConsole = function(consoleEndpoint) {
                 var endpoint = 'console?endpoint=' + consoleEndpoint;
                 modalInstance = $uibModal.open({
-                    animation: false,  // TODO true
                     templateUrl: 'cmd-dialog.html',
                     controller: 'CommandLineController',
                     resolve: {
@@ -52,7 +51,6 @@ angular.module('ptAnywhere')
             };
             self.onAddDevice = function(x, y) {
                 modalInstance = $uibModal.open({
-                    animation: false,  // TODO true
                     templateUrl: 'default-dialog.html',
                     controller: 'CreationController',
                     resolve: {
@@ -68,7 +66,6 @@ angular.module('ptAnywhere')
             };
             self.onAddLink = function(fromDevice, toDevice) {
                 modalInstance = $uibModal.open({
-                    animation: false,  // TODO true
                     templateUrl: 'default-dialog.html',
                     controller: 'LinkController',
                     //size: 'lg',
@@ -89,7 +86,6 @@ angular.module('ptAnywhere')
             };
             self.onEditDevice = function(device) {
                 modalInstance = $uibModal.open({
-                    animation: false,  // TODO true
                     templateUrl: 'default-dialog.html',
                     controller: 'UpdateController',
                     //size: 'lg',
@@ -104,14 +100,6 @@ angular.module('ptAnywhere')
                     if (changedDevice !== null) {  // If null, it means that the node didn't change
                         mapData.updateNode(changedDevice);
                     }
-                });
-
-                modalInstance.opened.then(function (changedDevice) {
-                    console.log('open');
-                });
-
-                modalInstance.rendered.then(function (changedDevice) {
-                    console.log('render');
                 });
             };
             self.onDeleteDevice = function(node) {

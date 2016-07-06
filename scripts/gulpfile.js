@@ -81,13 +81,20 @@ gulp.task('prepare_for_jar', ['bundle'], function() {
     var d = 'bower_components/'
     var dependencies = [d + 'angular/angular.min.js',
                         d + 'angular-route/angular-route.min.js',
+                        d + 'angular-animate/angular-animate.min.js',
+                        d + 'angular-bootstrap/ui-bootstrap-tpls.min.js',
+                        // Bootstrap JS code is not needed as it is already included in the "Angular UI bootstrap"
+                        // module included above.
+                        // Bootstrap CSS files still needed
+                        d + 'bootstrap/dist/css/bootstrap.min.css',
+                        d + 'bootstrap/dist/css/bootstrap-theme.min.css',
                         d + 'jquery/dist/jquery.min.js',
                         d + 'jquery-ui/ui/minified/core.min.js',
                         d + 'jquery-ui/ui/minified/widget.min.js',
                         d + 'jquery-ui/ui/minified/mouse.min.js',
                         d + 'jquery-ui/ui/minified/draggable.min.js',
                         d + 'jquery-ui-touch-punch/jquery.ui.touch-punch.min.js',
-                        d + 'bootstrap/dist/**',
+
                         d + 'vis/dist/**']
     gulp.src(dependencies)
         .pipe(gulp.dest('tmp/vendors'));
