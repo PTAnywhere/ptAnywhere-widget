@@ -17,7 +17,7 @@ angular.module('ptAnywhere')
             editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
             createEdgeError: 'Cannot link edges to a cluster.',
             deleteClusterError: 'Clusters cannot be deleted.',
-            editClusterError: 'Clusters cannot be edited.',
+            editClusterError: 'Clusters cannot be edited.'
             // END: Unused
         },
         session: {
@@ -44,19 +44,23 @@ angular.module('ptAnywhere')
             }
         },
         commandLineDialog: {
-            title: 'Command line',
+            title: 'Command line'
         },
         linkDialog: {
             title: 'Connect two devices',
             select: 'Please select which ports to connect...',
-            error: 'Sorry, something went wrong during the link creation.',
+            error: {
+                loading: 'Problem loading the interfaces for this device. Please, try it again.',
+                unavailability: 'One of the devices you are trying to link has no available interfaces.',
+                creation: 'Sorry, something went wrong during the link creation.'
+            }
         },
         creationDialog: {
             title: 'Create new device',
-            type: 'Device type',
+            type: 'Device type'
         },
         creationMenu: {
-            legend: 'To create a new device, drag it to the network map',
+            legend: 'To create a new device, drag it to the network map'
         },
         modificationDialog: {
             title: 'Modify device',
@@ -65,6 +69,6 @@ angular.module('ptAnywhere')
             defaultGW: 'Default gateway',
             ipAddress: 'IP address',
             subnetMask: 'Subnet mask',
-            noSettings: 'No settings can be specified for this type of interface.',
+            noSettings: 'No settings can be specified for this type of interface.'
         }
     });

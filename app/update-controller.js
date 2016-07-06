@@ -1,8 +1,8 @@
 angular.module('ptAnywhere')
     .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale_en', 'baseUrl',
-                                    'PTAnywhereAPIService', 'NetworkMapData', 'device',
+                                    'PTAnywhereAPIService', 'device',
                                      // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, res, baseUrl, api, mapData, deviceToEdit) {
+                                    function($log, $scope, $uibModalInstance, locale, baseUrl, api, deviceToEdit) {
         var self = this;
         $scope.submitError = null;
         $scope.interfaces = null;
@@ -12,10 +12,10 @@ angular.module('ptAnywhere')
             subnet: null
         };
 
-        $scope.locale = res;
+        $scope.locale = locale;
         $scope.modal = {
             id: 'modification-dialog',
-            title: res.modificationDialog.title,
+            title: locale.modificationDialog.title,
             bodyTemplate: baseUrl + '/html/update-dialog-body.html',
             hasSubmit: true
         };
@@ -40,6 +40,18 @@ angular.module('ptAnywhere')
                 $scope.interface.subnet = null;
             }
         });
+
+        self._load = function() {
+            api.getAllPorts(deviceToEdit)
+                .then(function(ports) {
+                    $scope.interfaces = ports;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                }, function() {
+                    $scope.submitError = 'Ports for the device ' + deviceToEdit.id + ' could not be loaded. Possible timeout.';
+                });
+        };
 
         self._haveGlobalSettingsChanged = function() {
             return ($scope.device.name != deviceToEdit.label) ||
@@ -90,13 +102,5 @@ angular.module('ptAnywhere')
             $uibModalInstance.dismiss('cancel');
         };
 
-        api.getAllPorts(deviceToEdit)
-            .then(function(ports) {
-                $scope.interfaces = ports;
-                if(!$scope.$$phase) {
-                    $scope.$apply();
-                }
-            }, function() {
-                $scope.submitError = 'Ports for the device ' + deviceToEdit.id + ' could not be loaded. Possible timeout.';
-            });
+        self._load();
     }]);

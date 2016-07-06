@@ -44,7 +44,25 @@ angular.module('ptAnywhere')
                 self.openAddDeviceModal(x, y);
             };
             self.onAddLink = function(fromDevice, toDevice) {
-                self.openAddLinkModal(fromDevice, toDevice);
+                modalInstance = $uibModal.open({
+                    animation: false,  // TODO true
+                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    controller: 'LinkController',
+                    //size: 'lg',
+                    resolve: {
+                        fromDevice: function () {
+                            return fromDevice;
+                        },
+                        toDevice: function () {
+                           return toDevice;
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function(ret) {
+                    mapData.connect(fromDevice, toDevice, ret.newLink.id, ret.newLink.url,
+                                    ret.fromPortName, ret.toPortName);
+                });
             };
             self.onEditDevice = function(device) {
                 modalInstance = $uibModal.open({
