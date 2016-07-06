@@ -30,12 +30,6 @@ angular.module('ptAnywhere')
                 return $http.get(sessionUrl + '/network', httpDefaults)
                             .then(ifSuccess, HttpRetry.responseError);
             },
-            getAvailablePorts: function(device) {
-                return $http.get(device.url + 'ports?free=true', httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
             addDevice: function(newDevice) {
                 return $http.post(sessionUrl + '/devices', newDevice, httpDefaults)
                             .then(function(response) {
@@ -44,6 +38,43 @@ angular.module('ptAnywhere')
             },
             removeDevice: function(device) {
                 return $http.delete(device.url, httpDefaults);
+            },
+            modifyDevice: function(device, deviceLabel, defaultGateway) {
+                // General settings: PUT to /devices/id
+                var modification = {label: deviceLabel};
+                if (defaultGateway !== '') {
+                    modification.defaultGateway = defaultGateway;
+                }
+                return $http.put(device.url, modification, httpDefaults)
+                            .then(function(response) {
+                                // FIXME This patch wouldn't be necessary if PTPIC library worked properly.
+                                var modifiedDevice = response.data;
+                                modifiedDevice.defaultGateway = defaultGateway;
+                                return modifiedDevice;
+                            });
+            },
+            modifyPort: function(portURL, ipAddress, subnetMask) {
+                // Send new IP settings
+                var modification = {
+                  portIpAddress: ipAddress,
+                  portSubnetMask: subnetMask
+                };
+                return $http.put(portURL, modification, httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            getAllPorts: function(device) {
+                return $http.get(device.url + 'ports', httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            getAvailablePorts: function(device) {
+                return $http.get(device.url + 'ports?free=true', httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
             },
             createLink: function(fromPortURL, toPortURL) {
                 var modification = {

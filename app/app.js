@@ -1,4 +1,4 @@
-angular.module('ptAnywhere', ['ngRoute'])
+angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
     .config(['$injector', '$provide', function($injector, $provide) {
         // Let's make sure that the following config sections have the constants available even
         // when they have not been defined by the user.

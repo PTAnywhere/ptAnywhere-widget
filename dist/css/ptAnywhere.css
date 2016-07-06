@@ -124,7 +124,7 @@ div.vis-network div.vis-manipulation div.vis-separator-line {
 
 /**** Modification dialog ****/
 
-#modify-device .tab-content{
+.tab-content{
   padding-top: 20px;
 }
 

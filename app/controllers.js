@@ -25,8 +25,9 @@ angular.module('ptAnywhere')
                 $location.path('/not-found');
             });
     }])
-    .controller('WidgetController', ['$q', '$location', '$routeParams', 'baseUrl', 'NetworkMapData', 'PTAnywhereAPIService',
-                                      function($q, $location, $routeParams, baseUrl, mapData, api) {
+    .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
+                                     'baseUrl', 'NetworkMapData', 'PTAnywhereAPIService',
+                                     function($q, $log, $location, $routeParams, $uibModal, baseUrl, mapData, api) {
         var self = this;
 
         if (!mapData.isLoaded()) {
@@ -44,14 +45,33 @@ angular.module('ptAnywhere')
             self.onAddLink = function(fromDevice, toDevice) {
                 self.openAddLinkModal(fromDevice, toDevice);
             };
-            self.onEditDevice = function(node) {};
+            self.onEditDevice = function(device) {
+                var modalInstance = $uibModal.open({
+                    animation: false,  // TODO true
+                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    controller: 'UpdateController',
+                    //size: 'lg',
+                    resolve: {
+                        device: function () {
+                            return device;
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function (changedDevice) {
+                    if (changedDevice !== null) {
+                        // If null, it means that the node didn't change
+                        mapData.updateNode(changedDevice);
+                    }
+                });
+            };
             self.onDeleteDevice = function(node) {
                 return $q(function(resolve, reject) {
                             api.removeDevice(node)
                                 .then(function() {
                                     resolve();
                                 }, function(error) {
-                                    console.error('Device removal.', error);
+                                    $log.error('Device removal.', error);
                                     reject();
                                 });
                 });
@@ -61,7 +81,7 @@ angular.module('ptAnywhere')
                             api.removeLink(edge).then(function() {
                                 resolve();
                             }, function() {
-                                console.error('Something went wrong in the link removal.');
+                                $log.error('Something went wrong in the link removal.');
                                 reject();
                             });
                 });

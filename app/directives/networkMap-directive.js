@@ -131,7 +131,7 @@ angular.module('ptAnywhere')
             }
             if ('onEditDevice' in $scope) {
                 editNode = function(data, callback) {
-                    $scope.onEditDevice(mapData.getNode(data.id));
+                    $scope.onEditDevice({device: mapData.getNode(data.id)});
                     callback(data);
                 };
             }

@@ -14,7 +14,8 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
       'scripts/bower_components/angular/angular.min.js',
-      //'scripts/bower_components/angular-route/angular-route.min.js',
+      'scripts/bower_components/angular-route/angular-route.min.js',
+      'scripts/bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js',
       'scripts/bower_components/angular-mocks/angular-mocks.js',
       'scripts/bower_components/vis/dist/vis.min.js',
       'app/**',  // The files to be tested
@@ -61,7 +62,7 @@ module.exports = function(config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['Chrome', 'Firefox', 'Safari'],
+    browsers: ['Firefox', 'Chrome', 'Safari'],
 
 
     // Continuous Integration mode
