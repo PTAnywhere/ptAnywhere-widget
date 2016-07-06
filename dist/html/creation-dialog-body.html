@@ -12,7 +12,7 @@
                 <p ng-if="deviceTypes === null">{{ locale.loading }}</p>
                 <div ng-if="deviceTypes !== null">
                     <select id="{{ modal.id }}Type" class="form-control" ng-model="newDevice.type"
-                            ng-options="typee.label for typee in deviceTypes">
+                            ng-options="type.label for type in deviceTypes">
                     </select>
                 </div>
             </div>

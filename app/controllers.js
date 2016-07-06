@@ -41,7 +41,20 @@ angular.module('ptAnywhere')
                 self.openCmdModal(endpoint);  // Set in the controller
             };
             self.onAddDevice = function(x, y) {
-                self.openAddDeviceModal(x, y);
+                modalInstance = $uibModal.open({
+                    animation: false,  // TODO true
+                    templateUrl: baseUrl + '/html/default-dialog2.html',
+                    controller: 'CreationController',
+                    resolve: {
+                        position: function () {
+                            return [x, y];
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function(device) {
+                    mapData.addNode(device);
+                });
             };
             self.onAddLink = function(fromDevice, toDevice) {
                 modalInstance = $uibModal.open({

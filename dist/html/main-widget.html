@@ -8,10 +8,4 @@
          on-delete-link="widget.onDeleteLink(link)"></div>
     <div class="creation-menu"></div>
     <div class="cmd-dialog" open="widget.openCmdModal" backdrop="true"></div>
-    <div ng-controller="CreationController as create">
-        <div class="creation-dialog" open="widget.openAddDeviceModal" backdrop="true" close="create.close"
-             device-types="create.allowedTypes" new-device="create.device"
-             on-submit="create.submit()" submit-error="create.submitError">
-        </div>
-    </div>
 </div>
