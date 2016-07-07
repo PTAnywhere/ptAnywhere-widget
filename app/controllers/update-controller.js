@@ -55,12 +55,14 @@ angular.module('ptAnywhere')
         };
 
         self._haveGlobalSettingsChanged = function() {
+            // TODO use $pristine instead
             return ($scope.device.name != deviceToEdit.label) ||
                    (('defaultGateway' in deviceToEdit) &&
                     ($scope.device.defaultGateway != deviceToEdit.defaultGateway));
         };
 
         self._hasInterfaceChanged = function() {
+            // TODO use $pristine instead
             return ($scope.interface.ipAddr !== null && $scope.interface.subnet !== null) &&
                    ($scope.interface.ipAddr != $scope.interface.selected.portIpAddress ||
                     $scope.interface.subnet != $scope.interface.selected.portSubnetMask);

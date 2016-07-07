@@ -109,6 +109,16 @@ angular.module('ptAnywhere')
             }
         }
 
+        /**
+         * Canvas' (0,0) does not correspond with the network map's DOM (0,0) position.
+         *   @arg x DOM X coordinate relative to the canvas element.
+         *   @arg y DOM Y coordinate relative to the canvas element.
+         *   @return Coordinates on the canvas with form {x:Number, y:Number}.
+         */
+        function toNetworkMapCoordinate(x, y) {
+            return network.DOMtoCanvas({x: x, y: y});
+        }
+
         function getManipulationOptions($scope) {
             var emptyFunction = function(data, callback) {};
             var addNode = emptyFunction;
@@ -180,7 +190,8 @@ angular.module('ptAnywhere')
                 onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
                 onEditDevice: '&',  //interactionCallback( nodes.get(data.id) );
                 onDeleteDevice: '&',  // interactionCallback(nodes.get(data.nodes[0]));
-                onDeleteLink: '&'  // interactionCallback(edge);
+                onDeleteLink: '&',  // interactionCallback(edge);
+                adaptCoordinates: '='  // Function defined in this directive but used by controllers.
             },
             template: '<div class="map"></div>',
             link: function($scope, $element, $attrs) {
@@ -189,6 +200,8 @@ angular.module('ptAnywhere')
                     $scope.$on('$destroy', function() {
                         network.destroy();
                     });
+
+                    $scope.adaptCoordinates = toNetworkMapCoordinate;
 
                     network.on('select', function(event) {
                         if ( isOnlyOneEdgeSelected(event) ) {

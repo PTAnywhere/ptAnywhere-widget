@@ -111,17 +111,36 @@ angular.module('ptAnywhere')
                                     $log.error('Device removal.', error);
                                     reject();
                                 });
-                });
+                        });
             };
             self.onDeleteLink = function(edge) {
                 return $q(function(resolve, reject) {
-                            api.removeLink(edge).then(function() {
-                                resolve();
-                            }, function() {
-                                $log.error('Something went wrong in the link removal.');
-                                reject();
-                            });
-                });
+                            api.removeLink(edge)
+                                .then(function() {
+                                    resolve();
+                                }, function() {
+                                    $log.error('Something went wrong in the link removal.');
+                                    reject();
+                                });
+                        });
+            };
+            self.onDrop = function(newDevice) {
+                return $q(function(resolve, reject) {
+                            // Adapt coordinates from DOM to canvas
+                            //  (function defined in the networkMap directive)
+                            var positionInMap = self.getNetworkCoordinates(newDevice.x, newDevice.y);
+                            newDevice.x = positionInMap.x;
+                            newDevice.y = positionInMap.y;
+
+                            api.addDevice(newDevice)
+                                .then(function(device) {
+                                    mapData.addNode(device);
+                                    resolve();
+                                }, function(error) {
+                                    $log.error('Device creation', error);
+                                    reject();
+                                });
+                      });
             };
         }
     }]);
