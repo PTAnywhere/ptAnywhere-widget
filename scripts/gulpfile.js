@@ -44,15 +44,14 @@ gulp.task('template', function () {
 gulp.task('concat', ['template'], function (cb) {
    return gulp.src(['!../app/widget.js', '!../app/console.js', SRC, TMP + TEMPLATE_JS])
       .pipe(plugins.concat(PTANYWHERE_JS))
-      // We write it to DIST because we will not use it afterwards.
-      .pipe(gulp.dest(TMP));
+      .pipe(gulp.dest(DIST));
 });
 
 // WARNING: It does the concat in alphabetical order.
 // Therefore, if a file named before "app" exists (the module definition is in app.js),
 // it will crash because the module would have not be defined by then.
 gulp.task('minimize', ['concat'], function (cb) {
-   return gulp.src(TMP + PTANYWHERE_JS)
+   return gulp.src(DIST + PTANYWHERE_JS)
       .pipe(plugins.uglify())
       .pipe(plugins.rename(PTANYWHERE_MIN_JS))
       .pipe(gulp.dest(DIST));
@@ -94,7 +93,6 @@ gulp.task('prepare_for_jar', ['bundle'], function() {
                         d + 'jquery-ui/ui/minified/mouse.min.js',
                         d + 'jquery-ui/ui/minified/draggable.min.js',
                         d + 'jquery-ui-touch-punch/jquery.ui.touch-punch.min.js',
-
                         d + 'vis/dist/**']
     gulp.src(dependencies)
         .pipe(gulp.dest('tmp/vendors'));
