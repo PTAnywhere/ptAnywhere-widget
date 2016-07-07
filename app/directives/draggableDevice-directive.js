@@ -1,5 +1,5 @@
 angular.module('ptAnywhere')
-    .directive('draggableDevice', [function() {
+    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
 
         function init($scope) {
             $scope.originalPosition = {
@@ -86,13 +86,12 @@ angular.module('ptAnywhere')
                 type: '@',
                 onDrop: '&'  // callback(device);
             },
-            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" src="{{ src }}" />',
+            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
             link: function($scope, $element, $attrs) {
-                if ('onDrop' in $attrs && $scope.onDrop !== null) {
-                    $scope.draggedSelector = $('img', $element);
-                    $scope.dragToSelector = $($scope.dragTo);
-                    init($scope);
-                }
+                $scope.path = imagesUrl + '/' + $scope.src;
+                $scope.draggedSelector = $('img', $element);
+                $scope.dragToSelector = $($scope.dragTo);
+                init($scope);
             }
         };
     }]);

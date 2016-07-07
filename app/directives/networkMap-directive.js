@@ -1,8 +1,8 @@
 angular.module('ptAnywhere')
-    .directive('networkMap', ['locale_en', 'NetworkMapData', function(res, mapData) {
+    .directive('networkMap', ['locale_en', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 
-        function createNetworkMap($scope, $element) {
+        function createNetworkMap($scope, $element, imagesUrl) {
             var visData = {
                 // TODO I would prefer to pass both as attrs instead of as a service.
                 // However, right now this is the most straightforward change.
@@ -27,22 +27,22 @@ angular.module('ptAnywhere')
                 groups: {
                     cloudDevice : {
                         shape : 'image',
-                        image : $scope.iconsSrc + 'cloud.png',
+                        image : imagesUrl + '/cloud.png',
                         size: 50,
                     },
                     routerDevice : {
                         shape : 'image',
-                        image : $scope.iconsSrc + 'router_cropped.png',
+                        image : imagesUrl + '/router_cropped.png',
                         size: 45,
                     },
                     switchDevice : {
                         shape : 'image',
-                        image : $scope.iconsSrc + 'switch_cropped.png',
+                        image : imagesUrl + '/switch_cropped.png',
                         size: 35,
                     },
                     pcDevice : {
                         shape : 'image',
-                        image : $scope.iconsSrc + 'pc_cropped.png',
+                        image : imagesUrl + '/pc_cropped.png',
                         size: 45,
                     }
                 },
@@ -184,7 +184,6 @@ angular.module('ptAnywhere')
         return {
             restrict: 'C',
             scope: {
-                iconsSrc: '@',
                 onDoubleClick: '&',  // callback(selected);
                 onAddDevice: '&',  // interactionCallback(data.x, data.y);
                 onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
@@ -195,37 +194,34 @@ angular.module('ptAnywhere')
             },
             template: '<div class="map"></div>',
             link: function($scope, $element, $attrs) {
-                if ('iconsSrc' in $attrs && $scope.iconsSrc !== '') {
-                    network = createNetworkMap($scope, $element);
-                    $scope.$on('$destroy', function() {
-                        network.destroy();
-                    });
+                network = createNetworkMap($scope, $element, imagesUrl);
+                $scope.$on('$destroy', function() {
+                    network.destroy();
+                });
 
-                    $scope.adaptCoordinates = toNetworkMapCoordinate;
+                $scope.adaptCoordinates = toNetworkMapCoordinate;
 
-                    network.on('select', function(event) {
-                        if ( isOnlyOneEdgeSelected(event) ) {
-                            var edge = mapData.getEdge(event.edges[0]);
-                            showEndpointsInEdge(edge);
-                        } else if ( isNodeSelected(event) ) {
-                            hideEndpointsInSelectedEdges(event);
-                        }
-                    });
-                    network.on('deselectEdge', function(event) {
-                        if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
-                            hideEndpointsInSelectedEdges(event.previousSelection);
-                        }
-                    });
-                    if ('onDoubleClick' in $scope) {
-                        network.on('doubleClick', function() {
-                            var selected = getSelectedNode();
-                            if (selected !== null) {
-                                $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
-                            }
-                        });
+                network.on('select', function(event) {
+                    if ( isOnlyOneEdgeSelected(event) ) {
+                        var edge = mapData.getEdge(event.edges[0]);
+                        showEndpointsInEdge(edge);
+                    } else if ( isNodeSelected(event) ) {
+                        hideEndpointsInSelectedEdges(event);
                     }
+                });
+                network.on('deselectEdge', function(event) {
+                    if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
+                        hideEndpointsInSelectedEdges(event.previousSelection);
+                    }
+                });
+                if ('onDoubleClick' in $scope) {
+                    network.on('doubleClick', function() {
+                        var selected = getSelectedNode();
+                        if (selected !== null) {
+                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                        }
+                    });
                 }
-
             }
         };
     }]);

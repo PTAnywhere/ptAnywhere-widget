@@ -1,5 +1,5 @@
 <div ng-controller="WidgetController as widget">
-    <div class="network networkMap" icons-src="{{ widget.iconsPath }}"
+    <div class="network networkMap"
          on-double-click="widget.openConsole(endpoint)"
          on-add-device="widget.onAddDevice(x, y)"
          on-add-link="widget.onAddLink(fromDevice, toDevice)"
@@ -13,22 +13,22 @@
             <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12">
                 <div class="row">
                     <figure class="col-md-3 col-sm-3 col-xs-3 text-center">
-                        <div class="draggableDevice" alt="cloud" src="/widgets/static/images/cloud.png"
+                        <div class="draggableDevice" alt="cloud" src="cloud.png"
                              drag-to=".map" type="cloud" on-drop="widget.onDrop(device)"></div>
                         <figcaption>Cloud</figcaption>
                     </figure>
                     <figure class="col-md-3 col-sm-3 col-xs-3 text-center">
-                        <div class="draggableDevice" alt="router" src="/widgets/static/images/router.png"
+                        <div class="draggableDevice" alt="router" src="router.png"
                              drag-to=".map" type="router" on-drop="widget.onDrop(device)"></div>
                         <figcaption>Router</figcaption>
                     </figure>
                     <figure class="col-md-3 col-sm-3 col-xs-3 text-center">
-                        <div class="draggableDevice" alt="switch" src="/widgets/static/images/switch.png"
+                        <div class="draggableDevice" alt="switch" src="switch.png"
                              drag-to=".map" type="switch" on-drop="widget.onDrop(device)"></div>
                         <figcaption>Switch</figcaption>
                     </figure>
                     <figure class="col-md-3 col-sm-3 col-xs-3 text-center">
-                        <div class="draggableDevice" alt="pc" src="/widgets/static/images/pc.png"
+                        <div class="draggableDevice" alt="pc" src="pc.png"
                              drag-to=".map" type="pc" on-drop="widget.onDrop(device)"></div>
                         <figcaption>Pc</figcaption>
                     </figure>

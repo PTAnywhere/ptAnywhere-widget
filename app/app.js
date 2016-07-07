@@ -4,6 +4,7 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
         // when they have not been defined by the user.
         var constants = {
             baseUrl: '',
+            imagesUrl: '',
             apiUrl: ''
         };
 

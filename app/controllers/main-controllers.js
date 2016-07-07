@@ -7,10 +7,10 @@ angular.module('ptAnywhere')
             });
     }])
     .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
-                                             'baseUrl', 'locale_en',
-                                              function($location, $routeParams, api, mapData, baseUrl, loc) {
+                                             'baseUrl', 'imagesUrl', 'locale_en',
+                                             function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
         var self = this;
-        self.baseUrl = baseUrl;  // FIXME An URL with the {{ baseUrl }} is going to be loaded before this is set!
+        self.path = imagesUrl;
         self.loading = loc.network.loading;
         self.message = '';
 
@@ -26,16 +26,14 @@ angular.module('ptAnywhere')
             });
     }])
     .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
-                                     'baseUrl', 'NetworkMapData', 'PTAnywhereAPIService',
-                                     function($q, $log, $location, $routeParams, $uibModal, baseUrl, mapData, api) {
+                                     'NetworkMapData', 'PTAnywhereAPIService',
+                                     function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
         var self = this;
         var modalInstance;
 
         if (!mapData.isLoaded()) {
             $location.path('/loading/' + $routeParams.id);
         } else {
-            self.iconsPath =  baseUrl + '/images/';
-
             self.openConsole = function(consoleEndpoint) {
                 var endpoint = 'console?endpoint=' + consoleEndpoint;
                 modalInstance = $uibModal.open({
