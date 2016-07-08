@@ -40,6 +40,330 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
         }).otherwise('/');
     }]);
 angular.module('ptAnywhere')
+    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
+
+        function init($scope) {
+            $scope.originalPosition = {
+                left: $scope.draggedSelector.css('left'),
+                top: $scope.draggedSelector.css('top')
+            };
+            $scope.draggedSelector.draggable({
+                helper: 'clone',
+                opacity: 0.4,
+                // The following properties interfere with the position I want to capture in the 'stop' event
+                /*revert: true, revertDuration: 2000,  */
+                start: function(event, ui) {
+                    $scope.draggedSelector.css({'opacity':'0.7'});
+                },
+                stop: function(event, ui) {
+                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
+                        var creatingIcon = initCreatingIcon(ui);
+                        var newDevice = getDevice($scope.type, ui.offset);
+                        $scope.onDrop({device: newDevice})
+                            .finally(function() {
+                                moveToStartPosition($scope);
+                                creatingIcon.remove();
+                            });
+                    } else {
+                        moveToStartPosition($scope);
+                    }
+                }
+            });
+        }
+
+        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
+        function collisionsWith(elementToCheck, possibleCollisionArea) {
+            var x1 = possibleCollisionArea.offset().left;
+            var y1 = possibleCollisionArea.offset().top;
+            var h1 = possibleCollisionArea.outerHeight(true);
+            var w1 = possibleCollisionArea.outerWidth(true);
+            var b1 = y1 + h1;
+            var r1 = x1 + w1;
+            var x2 = elementToCheck.offset().left;
+            var y2 = elementToCheck.offset().top;
+            var h2 = elementToCheck.outerHeight(true);
+            var w2 = elementToCheck.outerWidth(true);
+            var b2 = y2 + h2;
+            var r2 = x2 + w2;
+
+            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
+            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
+        }
+
+        function moveToStartPosition($scope) {
+            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
+                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
+                    left: $scope.originalPosition.left,
+                    top: $scope.originalPosition.top
+                });
+            });
+        }
+
+        function initCreatingIcon(ui) {
+            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
+            image.css('width', ui.helper.css('width'));
+            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
+            warning.prepend(image);
+            $('body').append(warning);
+            warning.css({position: 'absolute',
+                         left: ui.offset.left,
+                         top: ui.offset.top});
+            return warning;
+        }
+
+        function getDevice(deviceType, elementOffset) {
+            var x = elementOffset.left;
+            var y = elementOffset.top;
+            // We don't use the return
+            return {group: deviceType, x: x, y: y };
+        }
+
+        return {
+            restrict: 'C',
+            scope: {
+                alt: '@',
+                src: '@',
+                dragTo: '@',
+                type: '@',
+                onDrop: '&'  // callback(device);
+            },
+            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
+            link: function($scope, $element, $attrs) {
+                $scope.path = imagesUrl + '/' + $scope.src;
+                $scope.draggedSelector = $('img', $element);
+                $scope.dragToSelector = $($scope.dragTo);
+                init($scope);
+            }
+        };
+    }]);
+angular.module('ptAnywhere')
+    .directive('networkMap', ['locale_en', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
+        var network;
+
+        function createNetworkMap($scope, $element, imagesUrl) {
+            var visData = {
+                // TODO I would prefer to pass both as attrs instead of as a service.
+                // However, right now this is the most straightforward change.
+                // Since for passing it as attrs I would need to be an object and I am not using vis.DataSet.
+                nodes: mapData.getNodes(),
+                edges: mapData.getEdges()
+            };
+            var options = {
+                nodes: {
+                    physics: false,
+                    font: '14px verdana black',
+                },
+                edges: {
+                    width: 3,
+                    selectionWidth: 1.4,
+                    color: {
+                        color:'#606060',
+                        highlight:'#000000',
+                        hover: '#000000'
+                    }
+                 },
+                groups: {
+                    cloudDevice : {
+                        shape : 'image',
+                        image : imagesUrl + '/cloud.png',
+                        size: 50,
+                    },
+                    routerDevice : {
+                        shape : 'image',
+                        image : imagesUrl + '/router_cropped.png',
+                        size: 45,
+                    },
+                    switchDevice : {
+                        shape : 'image',
+                        image : imagesUrl + '/switch_cropped.png',
+                        size: 35,
+                    },
+                    pcDevice : {
+                        shape : 'image',
+                        image : imagesUrl + '/pc_cropped.png',
+                        size: 45,
+                    }
+                },
+                manipulation: getManipulationOptions($scope),
+                locale: 'ptAnywhere',
+                locales: {
+                    ptAnywhere: res.manipulationMenu
+                }
+            };
+            var container = $element.find('div')[0];
+            return new vis.Network(container, visData, options);
+        }
+
+        function getSelectedNode() {
+            var selected = network.getSelection();
+            if (selected.nodes.length !== 1) { // Only if just one is selected
+                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
+                return null;
+            }
+            return mapData.getNode(selected.nodes[0]);
+        }
+
+        function isOnlyOneEdgeSelected(event) {
+            return event.nodes.length === 0 && event.edges.length === 1;
+        }
+
+        function isNodeSelected(event) {
+            return event.nodes.length > 0;
+        }
+
+        function isShowingEndpoint(node) {
+            return node.label.indexOf('\n') !== -1;
+        }
+
+        function showEndpointsInEdge(edge) {
+            var fromNode = mapData.getNode(edge.from);
+            var toNode = mapData.getNode(edge.to);
+            if ( !isShowingEndpoint(fromNode) ) {
+                fromNode.label = fromNode.label + '\n(' + edge.fromLabel + ')';
+                mapData.updateNode(fromNode);
+            }
+            if ( !isShowingEndpoint(toNode) ) {
+                toNode.label = toNode.label + '\n(' + edge.toLabel + ')';
+                mapData.updateNode(toNode);
+            }
+        }
+
+        function hideEndpointsInEdge(edge) {
+            var fromNode = mapData.getNode(edge.from);
+            var toNode = mapData.getNode(edge.to);
+            if ( isShowingEndpoint(fromNode) ) {
+                fromNode.label = fromNode.label.split('\n')[0];
+                mapData.updateNode(fromNode);
+            }
+            if ( isShowingEndpoint(toNode) ) {
+                toNode.label = toNode.label.split('\n')[0];
+                mapData.updateNode(toNode);
+            }
+        }
+
+        function hideEndpointsInSelectedEdges(event) {
+            for (var i = 0; i < event.edges.length; i++) {
+                hideEndpointsInEdge( mapData.getEdge(event.edges[i]) );
+            }
+        }
+
+        /**
+         * Canvas' (0,0) does not correspond with the network map's DOM (0,0) position.
+         *   @arg x DOM X coordinate relative to the canvas element.
+         *   @arg y DOM Y coordinate relative to the canvas element.
+         *   @return Coordinates on the canvas with form {x:Number, y:Number}.
+         */
+        function toNetworkMapCoordinate(x, y) {
+            return network.DOMtoCanvas({x: x, y: y});
+        }
+
+        function getManipulationOptions($scope) {
+            var emptyFunction = function(data, callback) {};
+            var addNode = emptyFunction;
+            var addEdge = emptyFunction;
+            var editNode = emptyFunction;
+            var deleteNode = emptyFunction;
+            var deleteEdge = emptyFunction;
+
+            if ('onAddDevice' in $scope) {
+                addNode = function(data, callback) {
+                    $scope.onAddDevice({x: data.x, y: data.y});
+                };
+            }
+            if ('onAddLink' in $scope) {
+                addEdge = function(data, callback) {
+                    var fromDevice = mapData.getNode(data.from);
+                    var toDevice = mapData.getNode(data.to);
+                    $scope.onAddLink({fromDevice: fromDevice, toDevice: toDevice});
+                };
+            }
+            if ('onEditDevice' in $scope) {
+                editNode = function(data, callback) {
+                    $scope.onEditDevice({device: mapData.getNode(data.id)});
+                    callback(data);
+                };
+            }
+            if ('onDeleteDevice' in $scope) {
+                deleteNode = function(data, callback) {
+                    // Always (data.nodes.length>0) && (data.edges.length==0)
+                    // FIXME There might be more than a node selected...
+                    $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])})
+                            .then(function() {
+                                // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                callback(data);
+                            });
+                };
+            }
+            if ('onDeleteLink' in $scope) {
+                deleteEdge = function(data, callback) {
+                    // Always (data.nodes.length==0) && (data.edges.length>0)
+                    // TODO There might be more than an edge selected...
+                    var edge = mapData.getEdge(data.edges[0]);
+                    hideEndpointsInEdge(edge);
+                    $scope.onDeleteLink({link: edge})
+                            .then(function() {
+                                // This callback is important, otherwise it received 3 consecutive onDelete events.
+                                callback(data);
+                            });
+                };
+            }
+
+            return {
+                initiallyActive: true,
+                addNode: addNode,
+                addEdge: addEdge,
+                editNode: editNode,
+                editEdge: false,
+                deleteNode: deleteNode,
+                deleteEdge: deleteEdge
+            };
+        }
+
+        return {
+            restrict: 'C',
+            scope: {
+                onDoubleClick: '&',  // callback(selected);
+                onAddDevice: '&',  // interactionCallback(data.x, data.y);
+                onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
+                onEditDevice: '&',  //interactionCallback( nodes.get(data.id) );
+                onDeleteDevice: '&',  // interactionCallback(nodes.get(data.nodes[0]));
+                onDeleteLink: '&',  // interactionCallback(edge);
+                adaptCoordinates: '='  // Function defined in this directive but used by controllers.
+            },
+            template: '<div class="map"></div>',
+            link: function($scope, $element, $attrs) {
+                network = createNetworkMap($scope, $element, imagesUrl);
+                $scope.$on('$destroy', function() {
+                    network.destroy();
+                });
+
+                $scope.adaptCoordinates = toNetworkMapCoordinate;
+
+                network.on('select', function(event) {
+                    if ( isOnlyOneEdgeSelected(event) ) {
+                        var edge = mapData.getEdge(event.edges[0]);
+                        showEndpointsInEdge(edge);
+                    } else if ( isNodeSelected(event) ) {
+                        hideEndpointsInSelectedEdges(event);
+                    }
+                });
+                network.on('deselectEdge', function(event) {
+                    if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
+                        hideEndpointsInSelectedEdges(event.previousSelection);
+                    }
+                });
+                if ('onDoubleClick' in $scope) {
+                    network.on('doubleClick', function() {
+                        var selected = getSelectedNode();
+                        if (selected !== null) {
+                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                        }
+                    });
+                }
+            }
+        };
+    }]);
+angular.module('ptAnywhere')
     .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale_en', 'endpoint',
                                           function($scope, $uibModalInstance, locale, endpoint) {
         $scope.title = locale.commandLineDialog.title;
@@ -433,330 +757,6 @@ angular.module('ptAnywhere')
         };
 
         self._load();
-    }]);
-angular.module('ptAnywhere')
-    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
-
-        function init($scope) {
-            $scope.originalPosition = {
-                left: $scope.draggedSelector.css('left'),
-                top: $scope.draggedSelector.css('top')
-            };
-            $scope.draggedSelector.draggable({
-                helper: 'clone',
-                opacity: 0.4,
-                // The following properties interfere with the position I want to capture in the 'stop' event
-                /*revert: true, revertDuration: 2000,  */
-                start: function(event, ui) {
-                    $scope.draggedSelector.css({'opacity':'0.7'});
-                },
-                stop: function(event, ui) {
-                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
-                        var creatingIcon = initCreatingIcon(ui);
-                        var newDevice = getDevice($scope.type, ui.offset);
-                        $scope.onDrop({device: newDevice})
-                            .finally(function() {
-                                moveToStartPosition($scope);
-                                creatingIcon.remove();
-                            });
-                    } else {
-                        moveToStartPosition($scope);
-                    }
-                }
-            });
-        }
-
-        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
-        function collisionsWith(elementToCheck, possibleCollisionArea) {
-            var x1 = possibleCollisionArea.offset().left;
-            var y1 = possibleCollisionArea.offset().top;
-            var h1 = possibleCollisionArea.outerHeight(true);
-            var w1 = possibleCollisionArea.outerWidth(true);
-            var b1 = y1 + h1;
-            var r1 = x1 + w1;
-            var x2 = elementToCheck.offset().left;
-            var y2 = elementToCheck.offset().top;
-            var h2 = elementToCheck.outerHeight(true);
-            var w2 = elementToCheck.outerWidth(true);
-            var b2 = y2 + h2;
-            var r2 = x2 + w2;
-
-            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
-            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
-        }
-
-        function moveToStartPosition($scope) {
-            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
-                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
-                    left: $scope.originalPosition.left,
-                    top: $scope.originalPosition.top
-                });
-            });
-        }
-
-        function initCreatingIcon(ui) {
-            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
-            image.css('width', ui.helper.css('width'));
-            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
-            warning.prepend(image);
-            $('body').append(warning);
-            warning.css({position: 'absolute',
-                         left: ui.offset.left,
-                         top: ui.offset.top});
-            return warning;
-        }
-
-        function getDevice(deviceType, elementOffset) {
-            var x = elementOffset.left;
-            var y = elementOffset.top;
-            // We don't use the return
-            return {group: deviceType, x: x, y: y };
-        }
-
-        return {
-            restrict: 'C',
-            scope: {
-                alt: '@',
-                src: '@',
-                dragTo: '@',
-                type: '@',
-                onDrop: '&'  // callback(device);
-            },
-            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
-            link: function($scope, $element, $attrs) {
-                $scope.path = imagesUrl + '/' + $scope.src;
-                $scope.draggedSelector = $('img', $element);
-                $scope.dragToSelector = $($scope.dragTo);
-                init($scope);
-            }
-        };
-    }]);
-angular.module('ptAnywhere')
-    .directive('networkMap', ['locale_en', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
-        var network;
-
-        function createNetworkMap($scope, $element, imagesUrl) {
-            var visData = {
-                // TODO I would prefer to pass both as attrs instead of as a service.
-                // However, right now this is the most straightforward change.
-                // Since for passing it as attrs I would need to be an object and I am not using vis.DataSet.
-                nodes: mapData.getNodes(),
-                edges: mapData.getEdges()
-            };
-            var options = {
-                nodes: {
-                    physics: false,
-                    font: '14px verdana black',
-                },
-                edges: {
-                    width: 3,
-                    selectionWidth: 1.4,
-                    color: {
-                        color:'#606060',
-                        highlight:'#000000',
-                        hover: '#000000'
-                    }
-                 },
-                groups: {
-                    cloudDevice : {
-                        shape : 'image',
-                        image : imagesUrl + '/cloud.png',
-                        size: 50,
-                    },
-                    routerDevice : {
-                        shape : 'image',
-                        image : imagesUrl + '/router_cropped.png',
-                        size: 45,
-                    },
-                    switchDevice : {
-                        shape : 'image',
-                        image : imagesUrl + '/switch_cropped.png',
-                        size: 35,
-                    },
-                    pcDevice : {
-                        shape : 'image',
-                        image : imagesUrl + '/pc_cropped.png',
-                        size: 45,
-                    }
-                },
-                manipulation: getManipulationOptions($scope),
-                locale: 'ptAnywhere',
-                locales: {
-                    ptAnywhere: res.manipulationMenu
-                }
-            };
-            var container = $element.find('div')[0];
-            return new vis.Network(container, visData, options);
-        }
-
-        function getSelectedNode() {
-            var selected = network.getSelection();
-            if (selected.nodes.length !== 1) { // Only if just one is selected
-                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
-                return null;
-            }
-            return mapData.getNode(selected.nodes[0]);
-        }
-
-        function isOnlyOneEdgeSelected(event) {
-            return event.nodes.length === 0 && event.edges.length === 1;
-        }
-
-        function isNodeSelected(event) {
-            return event.nodes.length > 0;
-        }
-
-        function isShowingEndpoint(node) {
-            return node.label.indexOf('\n') !== -1;
-        }
-
-        function showEndpointsInEdge(edge) {
-            var fromNode = mapData.getNode(edge.from);
-            var toNode = mapData.getNode(edge.to);
-            if ( !isShowingEndpoint(fromNode) ) {
-                fromNode.label = fromNode.label + '\n(' + edge.fromLabel + ')';
-                mapData.updateNode(fromNode);
-            }
-            if ( !isShowingEndpoint(toNode) ) {
-                toNode.label = toNode.label + '\n(' + edge.toLabel + ')';
-                mapData.updateNode(toNode);
-            }
-        }
-
-        function hideEndpointsInEdge(edge) {
-            var fromNode = mapData.getNode(edge.from);
-            var toNode = mapData.getNode(edge.to);
-            if ( isShowingEndpoint(fromNode) ) {
-                fromNode.label = fromNode.label.split('\n')[0];
-                mapData.updateNode(fromNode);
-            }
-            if ( isShowingEndpoint(toNode) ) {
-                toNode.label = toNode.label.split('\n')[0];
-                mapData.updateNode(toNode);
-            }
-        }
-
-        function hideEndpointsInSelectedEdges(event) {
-            for (var i = 0; i < event.edges.length; i++) {
-                hideEndpointsInEdge( mapData.getEdge(event.edges[i]) );
-            }
-        }
-
-        /**
-         * Canvas' (0,0) does not correspond with the network map's DOM (0,0) position.
-         *   @arg x DOM X coordinate relative to the canvas element.
-         *   @arg y DOM Y coordinate relative to the canvas element.
-         *   @return Coordinates on the canvas with form {x:Number, y:Number}.
-         */
-        function toNetworkMapCoordinate(x, y) {
-            return network.DOMtoCanvas({x: x, y: y});
-        }
-
-        function getManipulationOptions($scope) {
-            var emptyFunction = function(data, callback) {};
-            var addNode = emptyFunction;
-            var addEdge = emptyFunction;
-            var editNode = emptyFunction;
-            var deleteNode = emptyFunction;
-            var deleteEdge = emptyFunction;
-
-            if ('onAddDevice' in $scope) {
-                addNode = function(data, callback) {
-                    $scope.onAddDevice({x: data.x, y: data.y});
-                };
-            }
-            if ('onAddLink' in $scope) {
-                addEdge = function(data, callback) {
-                    var fromDevice = mapData.getNode(data.from);
-                    var toDevice = mapData.getNode(data.to);
-                    $scope.onAddLink({fromDevice: fromDevice, toDevice: toDevice});
-                };
-            }
-            if ('onEditDevice' in $scope) {
-                editNode = function(data, callback) {
-                    $scope.onEditDevice({device: mapData.getNode(data.id)});
-                    callback(data);
-                };
-            }
-            if ('onDeleteDevice' in $scope) {
-                deleteNode = function(data, callback) {
-                    // Always (data.nodes.length>0) && (data.edges.length==0)
-                    // FIXME There might be more than a node selected...
-                    $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])})
-                            .then(function() {
-                                // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                callback(data);
-                            });
-                };
-            }
-            if ('onDeleteLink' in $scope) {
-                deleteEdge = function(data, callback) {
-                    // Always (data.nodes.length==0) && (data.edges.length>0)
-                    // TODO There might be more than an edge selected...
-                    var edge = mapData.getEdge(data.edges[0]);
-                    hideEndpointsInEdge(edge);
-                    $scope.onDeleteLink({link: edge})
-                            .then(function() {
-                                // This callback is important, otherwise it received 3 consecutive onDelete events.
-                                callback(data);
-                            });
-                };
-            }
-
-            return {
-                initiallyActive: true,
-                addNode: addNode,
-                addEdge: addEdge,
-                editNode: editNode,
-                editEdge: false,
-                deleteNode: deleteNode,
-                deleteEdge: deleteEdge
-            };
-        }
-
-        return {
-            restrict: 'C',
-            scope: {
-                onDoubleClick: '&',  // callback(selected);
-                onAddDevice: '&',  // interactionCallback(data.x, data.y);
-                onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
-                onEditDevice: '&',  //interactionCallback( nodes.get(data.id) );
-                onDeleteDevice: '&',  // interactionCallback(nodes.get(data.nodes[0]));
-                onDeleteLink: '&',  // interactionCallback(edge);
-                adaptCoordinates: '='  // Function defined in this directive but used by controllers.
-            },
-            template: '<div class="map"></div>',
-            link: function($scope, $element, $attrs) {
-                network = createNetworkMap($scope, $element, imagesUrl);
-                $scope.$on('$destroy', function() {
-                    network.destroy();
-                });
-
-                $scope.adaptCoordinates = toNetworkMapCoordinate;
-
-                network.on('select', function(event) {
-                    if ( isOnlyOneEdgeSelected(event) ) {
-                        var edge = mapData.getEdge(event.edges[0]);
-                        showEndpointsInEdge(edge);
-                    } else if ( isNodeSelected(event) ) {
-                        hideEndpointsInSelectedEdges(event);
-                    }
-                });
-                network.on('deselectEdge', function(event) {
-                    if ( isOnlyOneEdgeSelected(event.previousSelection) ) {
-                        hideEndpointsInSelectedEdges(event.previousSelection);
-                    }
-                });
-                if ('onDoubleClick' in $scope) {
-                    network.on('doubleClick', function() {
-                        var selected = getSelectedNode();
-                        if (selected !== null) {
-                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
-                        }
-                    });
-                }
-            }
-        };
     }]);
 angular.module('ptAnywhere')
     .value('locale_en', {
