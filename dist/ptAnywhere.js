@@ -5,6 +5,8 @@
  */
 angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
     .config(['$injector', '$provide', function($injector, $provide) {
+        $log = console;  // FIXME Apparently $log injection does not work in my tests.
+
         // Let's make sure that the following config sections have the constants available even
         // when they have not been defined by the user.
         var constants = {
@@ -12,27 +14,50 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
             imagesUrl: '',
             apiUrl: ''
         };
-
         for (var constantName in constants) {
             try {
                 $injector.get(constantName);  // TODO Would $injector.has() work too?
                 //constant exists
-            } catch(e){
-                console.log('Setting default value for non existing "baseUrl" constant: "' + constants[constantName] + '"');
+            } catch(e) {
+                $log.log('Setting default value for non existing "baseUrl" constant: "' + constants[constantName] + '"');
                 $provide.constant(constantName, constants[constantName]);  // Set default value
             }
+        }
+
+        // default selection (this constant is already provided in the distributed JS).
+        var selectedLocale = 'locale_en';
+        try {
+            selectedLocale = $injector.get('useLocale');
+        } catch(e) {
+            $log.warn('Locales were not properly configured: using default ones.');
+        }
+
+        var locales;
+        try {
+            locales = $injector.get(selectedLocale);
+            $provide.constant('locale', locales);
+            $log.debug('Locales loaded from: ' + selectedLocale);
+        } catch(e) {
+            $log.error('Locales to use could not be loaded from constant:' + selectedLocale + '.');
         }
     }])
     .config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('HttpErrorsInterceptor');
     }])
-    .config(['$routeProvider', function($routeProvider) {
-        // configure the routing rules here
+    .config(['$routeProvider', 'locale',  function($routeProvider, locale) {
+        function createSimpleTemplate(message) {
+            return '<div class="row message"><div class="col-md-8 col-md-offset-2 text-center">' +
+                   '<h1>' + message.title + '</h1>' + (('content' in message)? message.content: '') + '</div></div>';
+        }
         $routeProvider.when('/', {
-            template: '',
+            template: createSimpleTemplate(locale.session.creating),
             controller: 'SessionCreatorController'
+        }).when('/session-unavailable', {
+            template: createSimpleTemplate(locale.session.unavailable)
+        }).when('/session-error', {
+            template: createSimpleTemplate(locale.session.genericError)
         }).when('/not-found', {
-            templateUrl: 'not-found.html'
+            template: createSimpleTemplate(locale.session.notFound)
         }).when('/loading/:id', {
             templateUrl: 'loading.html'
         }).when('/s/:id', {
@@ -40,7 +65,7 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
         }).otherwise('/');
     }]);
 angular.module('ptAnywhere')
-    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale_en', 'endpoint',
+    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
                                           function($scope, $uibModalInstance, locale, endpoint) {
         $scope.title = locale.commandLineDialog.title;
         $scope.endpoint = endpoint;
@@ -49,7 +74,7 @@ angular.module('ptAnywhere')
         };
     }]);
 angular.module('ptAnywhere')
-    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale_en',
+    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
                                         'PTAnywhereAPIService', 'position',
                                     function($log, $scope, $uibModalInstance, locale, api, position) {
         $scope.submitError = null;
@@ -92,7 +117,7 @@ angular.module('ptAnywhere')
         };
     }]);
 angular.module('ptAnywhere')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale_en', 'PTAnywhereAPIService',
+    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService',
                                     'fromDevice', 'toDevice',
                                     function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;
@@ -187,10 +212,16 @@ angular.module('ptAnywhere')
         api.createSession(fileToOpen, null)
             .then(function(sessionId) {
                 $location.path('/loading/' + sessionId);
+            }, function(response) {
+                if (response.status === 503) {
+                    $location.path('/session-unavailable');
+                } else {
+                    $location.path('/session-error');
+                }
             });
     }])
     .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
-                                             'baseUrl', 'imagesUrl', 'locale_en',
+                                             'baseUrl', 'imagesUrl', 'locale',
                                              function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
         var self = this;
         self.path = imagesUrl;
@@ -326,8 +357,7 @@ angular.module('ptAnywhere')
         }
     }]);
 angular.module('ptAnywhere')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale_en',
-                                    'PTAnywhereAPIService', 'device',
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService', 'device',
                                      // Device is injected in $uiModal's resolve.
                                     function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
@@ -532,10 +562,10 @@ angular.module('ptAnywhere')
         };
     }]);
 angular.module('ptAnywhere')
-    .directive('networkMap', ['locale_en', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
+    .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 
-        function createNetworkMap($scope, $element, imagesUrl) {
+        function createNetworkMap($scope, networkContainer, imagesUrl, locale) {
             var visData = {
                 // TODO I would prefer to pass both as attrs instead of as a service.
                 // However, right now this is the most straightforward change.
@@ -561,32 +591,31 @@ angular.module('ptAnywhere')
                     cloudDevice : {
                         shape : 'image',
                         image : imagesUrl + '/cloud.png',
-                        size: 50,
+                        size: 50
                     },
                     routerDevice : {
                         shape : 'image',
                         image : imagesUrl + '/router_cropped.png',
-                        size: 45,
+                        size: 45
                     },
                     switchDevice : {
                         shape : 'image',
                         image : imagesUrl + '/switch_cropped.png',
-                        size: 35,
+                        size: 35
                     },
                     pcDevice : {
                         shape : 'image',
                         image : imagesUrl + '/pc_cropped.png',
-                        size: 45,
+                        size: 45
                     }
                 },
-                manipulation: getManipulationOptions($scope),
+                manipulation: getManipulationOptions($scope, locale),
                 locale: 'ptAnywhere',
                 locales: {
                     ptAnywhere: res.manipulationMenu
                 }
             };
-            var container = $element.find('div')[0];
-            return new vis.Network(container, visData, options);
+            return new vis.Network(networkContainer, visData, options);
         }
 
         function getSelectedNode() {
@@ -652,7 +681,19 @@ angular.module('ptAnywhere')
             return network.DOMtoCanvas({x: x, y: y});
         }
 
-        function getManipulationOptions($scope) {
+        /* BEGIN tweak to vis.js */
+        /* (Ugly) It uses jQuery to add a status message in vis.js manipulation menu. */
+        function showStatus(msg) {
+            $('div.vis-manipulation').append('<div class="statusMsg vis-button vis-none"><div class="vis-label text-warning">' + msg + '</p></div>');
+            $('div.statusMsg').fadeIn('slow');
+        }
+        function showTemporaryStatus(msg) {
+            $('div.vis-manipulation').append('<div class="statusMsg vis-button vis-none"><div class="vis-label text-danger">' + msg + '</p></div>');
+            $('div.statusMsg').fadeIn('slow').delay( 2000 ).fadeOut('slow');
+        }
+        /* END tweak to vis.js */
+
+        function getManipulationOptions($scope, locale) {
             var emptyFunction = function(data, callback) {};
             var addNode = emptyFunction;
             var addEdge = emptyFunction;
@@ -680,17 +721,22 @@ angular.module('ptAnywhere')
             }
             if ('onDeleteDevice' in $scope) {
                 deleteNode = function(data, callback) {
+                    showStatus(locale.deleteDevice.status);
                     // Always (data.nodes.length>0) && (data.edges.length==0)
                     // FIXME There might be more than a node selected...
                     $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])})
                             .then(function() {
                                 // This callback is important, otherwise it received 3 consecutive onDelete events.
                                 callback(data);
+                            }, function() {
+                                callback([]);
+                                showTemporaryStatus(locale.deleteDevice.error);
                             });
                 };
             }
             if ('onDeleteLink' in $scope) {
                 deleteEdge = function(data, callback) {
+                    showStatus(locale.deleteLink.status);
                     // Always (data.nodes.length==0) && (data.edges.length>0)
                     // TODO There might be more than an edge selected...
                     var edge = mapData.getEdge(data.edges[0]);
@@ -699,6 +745,9 @@ angular.module('ptAnywhere')
                             .then(function() {
                                 // This callback is important, otherwise it received 3 consecutive onDelete events.
                                 callback(data);
+                            }, function() {
+                                callback([]);
+                                showTemporaryStatus(locale.deleteLink.error);
                             });
                 };
             }
@@ -727,7 +776,8 @@ angular.module('ptAnywhere')
             },
             template: '<div class="map"></div>',
             link: function($scope, $element, $attrs) {
-                network = createNetworkMap($scope, $element, imagesUrl);
+                var container = $element.find('div')[0];
+                network = createNetworkMap($scope, container, imagesUrl, res);
                 $scope.$on('$destroy', function() {
                     network.destroy();
                 });
@@ -759,7 +809,8 @@ angular.module('ptAnywhere')
         };
     }]);
 angular.module('ptAnywhere')
-    .value('locale_en', {
+    // Constant instead of value because it will be used in config.
+    .constant('locale_en', {
         loading: 'Loading...',
         loadingInfo: 'Loading info...',
         name: 'Name',
@@ -782,13 +833,22 @@ angular.module('ptAnywhere')
         },
         session: {
             creating: {
-                title: 'Creating new session...',
-                content: ''
+                title: 'Creating new session...'
+            },
+            notFound: {
+                title: 'Topology not found',
+                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
+                         '<p><a href="#/">Click here</a> to initiate a new one.</p>'
             },
             unavailable: {
                 title: 'Unavailable PT instances',
                 content: '<p>Sorry, there are <b>no Packet Tracer instances available</b> right now to initiate a session.</p>' +
-                         '<p>Please, wait a little bit and <b>try again</b>.</p>'
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
+            },
+            genericError: {
+                title: 'Error creating PT instance',
+                content: '<p>Sorry, there was an error initiating the session.</p>' +
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
             }
         },
         network: {
@@ -803,8 +863,20 @@ angular.module('ptAnywhere')
                          '<p><a href="?session">Click here</a> to initiate a new one.</p>'
             }
         },
-        commandLineDialog: {
-            title: 'Command line'
+        deleteDevice: {
+            status: 'Deleting device...',
+            error: 'The device could not be deleted.'
+        },
+        deleteLink: {
+            status: 'Deleting link...',
+            error: 'The link could not be deleted.'
+        },
+        creationMenu: {
+            legend: 'To create a new device, drag it to the network map'
+        },
+        creationDialog: {
+            title: 'Create new device',
+            type: 'Device type'
         },
         linkDialog: {
             title: 'Connect two devices',
@@ -815,13 +887,6 @@ angular.module('ptAnywhere')
                 creation: 'Sorry, something went wrong during the link creation.'
             }
         },
-        creationDialog: {
-            title: 'Create new device',
-            type: 'Device type'
-        },
-        creationMenu: {
-            legend: 'To create a new device, drag it to the network map'
-        },
         modificationDialog: {
             title: 'Modify device',
             globalSettings: 'Global Settings',
@@ -830,6 +895,9 @@ angular.module('ptAnywhere')
             ipAddress: 'IP address',
             subnetMask: 'Subnet mask',
             noSettings: 'No settings can be specified for this type of interface.'
+        },
+        commandLineDialog: {
+            title: 'Command line'
         }
     });
 
@@ -844,7 +912,7 @@ angular.module('ptAnywhere')
                 if (previousSessionId !== null) {
                     newSession.sameUserAsInSession = previousSessionId;
                 }
-                return $http.post(apiUrl + '/sessions', newSession, {timeout: 10000})
+                return $http.post(apiUrl + '/sessions', newSession, httpDefaults)
                             .then(function(response) {
                                 // Although "startSession" will be called afterwards and override this:
                                 sessionUrl = response.data;
@@ -929,7 +997,7 @@ angular.module('ptAnywhere')
             }
         };
     }])
-    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale_en',
+    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale',
                            function($http, $q, $timeout, $location, res) {
         var tryCount = 0;
         var maxRetries = 5;
@@ -981,12 +1049,13 @@ angular.module('ptAnywhere')
     .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
         return {
             responseError: function(response) {
-                // TODO 404 or 410: sessionExpirationCallback (redirect to not_found)
-                if (response.status === 404 || response.status === 410) {
+                // Session does not exist or has expired if we get error 410.
+                if (response.status === 410) {
                     $location.path('/not-found');
+                } else {
+                    // Treat it normally...
+                    return $q.reject(response);
                 }
-                // E.g., session has expired and we get error 404 or 410
-                return $q.reject(response);
             }
         };
     }]);
@@ -1061,5 +1130,4 @@ $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div cla
 $templateCache.put('link-dialog-body.html','<div ng-show="isLoadingInterfaces() && loadError === null">{{ locale.loadingInfo }}</div>\n<div ng-show="!isLoadingInterfaces()">\n    <div ng-show="availableInterfaces()">\n        <p>{{ locale.linkDialog.select }}</p>\n        <div class="clearfix form-group">\n            <label for="{{modal.id}}FromIface" class="col-md-3 fromDeviceName">{{ fromDeviceName }}</label>\n            <div class="col-md-9" ng-if="fromInterfaces !== null">\n                <select id="{{modal.id}}FromIface" class="form-control" size="1" ng-model="selected.fromIface"\n                        ng-options="iface.portName for iface in fromInterfaces">\n                </select>\n            </div>\n        </div>\n        <div class="clearfix form-group">\n            <label for="{{modal.id}}ToIface" class="col-md-3 toDeviceName">{{ toDeviceName }}</label>\n            <div class="col-md-9" ng-if="toInterfaces !== null">\n                <select id="{{modal.id}}ToIface" class="form-control" size="1" ng-model="selected.toIface"\n                        ng-options="iface.portName for iface in toInterfaces">\n                </select>\n            </div>\n        </div>\n    </div>\n    <div ng-show="!availableInterfaces()">\n        <p>{{ locale.linkDialog.error.unavailability }}</p>\n    </div>\n</div>\n<div ng-show="loadError !== null">\n    <p>{{ locale.linkDialog.error.loading }}</p>\n    <p>{{ loadError }}</p>\n</div>');
 $templateCache.put('loading.html','<div class="loading" ng-controller="SessionLoadingController as loading">\n    <img class="loading-icon" ng-src="{{ loading.path }}/loading.gif" alt="Loading network topology..." />\n    <p>{{ loading.loading }}</p>\n    <p>{{ loading.message }}</p>\n</div>');
 $templateCache.put('main-widget.html','<div ng-controller="WidgetController as widget">\n    <div class="network networkMap"\n         on-double-click="widget.openConsole(endpoint)"\n         on-add-device="widget.onAddDevice(x, y)"\n         on-add-link="widget.onAddLink(fromDevice, toDevice)"\n         on-edit-device="widget.onEditDevice(device)"\n         on-delete-device="widget.onDeleteDevice(device)"\n         on-delete-link="widget.onDeleteLink(link)"\n         adapt-coordinates="widget.getNetworkCoordinates"\n    ></div>\n    <div class="creation-menu">\n        <fieldset>\n            <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12">\n                <div class="row">\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="cloud" src="cloud.png"\n                             drag-to=".map" type="cloud" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Cloud</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="router" src="router.png"\n                             drag-to=".map" type="router" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Router</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="switch" src="switch.png"\n                             drag-to=".map" type="switch" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Switch</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="pc" src="pc.png"\n                             drag-to=".map" type="pc" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Pc</figcaption>\n                    </figure>\n                </div>\n            </div>\n        </fieldset>\n    </div>\n</div>');
-$templateCache.put('not-found.html','<div class="row message">\n    <div class="col-md-8 col-md-offset-2 text-center">\n        <h1>Topology not found</h1>\n        <p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>\n        <p><a href="#/">Click here</a> to initiate a new one.</p>\n    </div>\n</div>');
 $templateCache.put('update-dialog-body.html','<uib-tabset>\n    <uib-tab>\n        <uib-tab-heading>{{ locale.modificationDialog.globalSettings }}</uib-tab-heading>\n        <div class="clearfix form-group">\n            <label for="{{ modal.id }}-name">{{ locale.name }}</label>\n            <input type="text" ng-model="device.name" id="{{ modal.id }}-name" class="form-control" />\n        </div>\n        <div class="clearfix form-group" ng-show="device.defaultGateway !== null"\n             ng-class="{\'has-error\': dialogForm.defaultgw.$invalid}">\n            <label for="{{ modal.id }}-default-gw" class="control-label">{{ locale.modificationDialog.defaultGW }}</label>\n            <input type="text" ng-model="device.defaultGateway" ng-pattern="ipAddrPattern"\n                   name="defaultgw" id="{{ modal.id }}-default-gw" class="form-control" />\n        </div>\n    </uib-tab>\n    <uib-tab>\n        <uib-tab-heading>{{ locale.modificationDialog.interfaces }}</uib-tab-heading>\n        <div ng-show="interfaces === null">{{ locale.loadingInfo }}</div>\n        <div ng-show="interfaces !== null">\n            <div class="clearfix form-group">\n                <label for="{{ modal.id }}-ifaces" class="control-label">{{ locale.name }}</label>\n                <select id="{{ modal.id }}-ifaces" class="form-control" size="1" ng-model="interface.selected"\n                        ng-options="iface.portName for iface in interfaces">\n                </select>\n            </div>\n            <hr />\n            <div class="clearfix form-group" ng-show="interface.ipAddr !== null">\n                <div class="clearfix form-group" ng-class="{\'has-error\': dialogForm.ipaddr.$invalid}">\n                    <label for="{{ modal.id }}-ipaddr" class="control-label">{{ locale.modificationDialog.ipAddress }}</label>\n                    <input type="text" ng-model="interface.ipAddr" ng-pattern="ipAddrPattern"\n                           name="ipaddr" id="{{ modal.id }}-ipaddr" class="form-control" />\n                </div>\n                <div class="clearfix form-group" ng-class="{\'has-error\': dialogForm.subnet.$invalid}">\n                    <label for="{{ modal.id }}-subnet" class="control-label">{{ locale.modificationDialog.subnetMask }}</label>\n                    <input type="text" ng-model="interface.subnet" ng-pattern="ipAddrPattern"\n                           name="subnet" id="{{ modal.id }}-subnet" class="form-control"/>\n                </div>\n            </div>\n            <div class="clearfix form-group" ng-show="interface.ipAddr === null">\n                <p class="col-md-12">{{ locale.modificationDialog.noSettings }}</p>\n            </div>\n        </div>\n    </uib-tab>\n</uib-tabset>\n');}]);

@@ -1,5 +1,5 @@
 angular.module('ptAnywhere')
-    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale_en',
+    .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
                                         'PTAnywhereAPIService', 'position',
                                     function($log, $scope, $uibModalInstance, locale, api, position) {
         $scope.submitError = null;

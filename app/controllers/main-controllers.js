@@ -13,7 +13,7 @@ angular.module('ptAnywhere')
             });
     }])
     .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
-                                             'baseUrl', 'imagesUrl', 'locale_en',
+                                             'baseUrl', 'imagesUrl', 'locale',
                                              function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
         var self = this;
         self.path = imagesUrl;

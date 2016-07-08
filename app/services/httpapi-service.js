@@ -94,7 +94,7 @@ angular.module('ptAnywhere')
             }
         };
     }])
-    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale_en',
+    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale',
                            function($http, $q, $timeout, $location, res) {
         var tryCount = 0;
         var maxRetries = 5;

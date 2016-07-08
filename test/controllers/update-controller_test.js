@@ -2,7 +2,7 @@ describe('update controller', function() {
     beforeEach(module('ptAnywhere'));
 
     var ctrl, scope;
-    beforeEach(inject(function($controller, $rootScope) {
+    beforeEach(inject(function($controller, $rootScope, locale_en) {
         scope = $rootScope.$new();
         ctrl = $controller('UpdateController', {
             $scope: scope,
