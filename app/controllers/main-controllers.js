@@ -4,6 +4,12 @@ angular.module('ptAnywhere')
         api.createSession(fileToOpen, null)
             .then(function(sessionId) {
                 $location.path('/loading/' + sessionId);
+            }, function(response) {
+                if (response.status === 503) {
+                    $location.path('/session-unavailable');
+                } else {
+                    $location.path('/session-error');
+                }
             });
     }])
     .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
