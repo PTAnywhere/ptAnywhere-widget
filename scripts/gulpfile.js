@@ -31,7 +31,10 @@ gulp.task('lint', function() {
 gulp.task('test', function (done) {
   new Server({
     configFile: __dirname + '/karma.conf.ci.js'
-  }, done).start();
+  }, function(exitCode) {
+    // http://stackoverflow.com/questions/37551521/why-does-gulp-error-when-passing-the-done-function-to-karmas-server
+    done();
+  }).start();
 });
 
 gulp.task('template', function () {
