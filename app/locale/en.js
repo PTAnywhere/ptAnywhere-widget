@@ -1,5 +1,6 @@
 angular.module('ptAnywhere')
-    .value('locale_en', {
+    // Constant instead of value because it will be used in config.
+    .constant('locale_en', {
         loading: 'Loading...',
         loadingInfo: 'Loading info...',
         name: 'Name',
@@ -22,13 +23,22 @@ angular.module('ptAnywhere')
         },
         session: {
             creating: {
-                title: 'Creating new session...',
-                content: ''
+                title: 'Creating new session...'
+            },
+            notFound: {
+                title: 'Topology not found',
+                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
+                         '<p><a href="#/">Click here</a> to initiate a new one.</p>'
             },
             unavailable: {
                 title: 'Unavailable PT instances',
                 content: '<p>Sorry, there are <b>no Packet Tracer instances available</b> right now to initiate a session.</p>' +
-                         '<p>Please, wait a little bit and <b>try again</b>.</p>'
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
+            },
+            genericError: {
+                title: 'Error creating PT instance',
+                content: '<p>Sorry, there was an error initiating the session.</p>' +
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
             }
         },
         network: {
@@ -43,8 +53,20 @@ angular.module('ptAnywhere')
                          '<p><a href="?session">Click here</a> to initiate a new one.</p>'
             }
         },
-        commandLineDialog: {
-            title: 'Command line'
+        deleteDevice: {
+            status: 'Deleting device...',
+            error: 'The device could not be deleted.'
+        },
+        deleteLink: {
+            status: 'Deleting link...',
+            error: 'The link could not be deleted.'
+        },
+        creationMenu: {
+            legend: 'To create a new device, drag it to the network map'
+        },
+        creationDialog: {
+            title: 'Create new device',
+            type: 'Device type'
         },
         linkDialog: {
             title: 'Connect two devices',
@@ -55,13 +77,6 @@ angular.module('ptAnywhere')
                 creation: 'Sorry, something went wrong during the link creation.'
             }
         },
-        creationDialog: {
-            title: 'Create new device',
-            type: 'Device type'
-        },
-        creationMenu: {
-            legend: 'To create a new device, drag it to the network map'
-        },
         modificationDialog: {
             title: 'Modify device',
             globalSettings: 'Global Settings',
@@ -70,5 +85,8 @@ angular.module('ptAnywhere')
             ipAddress: 'IP address',
             subnetMask: 'Subnet mask',
             noSettings: 'No settings can be specified for this type of interface.'
+        },
+        commandLineDialog: {
+            title: 'Command line'
         }
     });
