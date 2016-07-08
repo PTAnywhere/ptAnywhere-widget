@@ -99,6 +99,12 @@ p.bg-danger {
 
 /**** Network edit menu ****/
 
+/* Custom status messages */
+div.statusMsg {
+  display: none;
+  margin-left: 40px;
+}
+
 div.vis-network div.vis-edit-mode {
   margin: 0;
   padding: 0;  /* Sth changes in the dev vis.js css */

@@ -2,7 +2,7 @@ angular.module('ptAnywhere')
     .directive('networkMap', ['locale_en', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 
-        function createNetworkMap($scope, $element, imagesUrl) {
+        function createNetworkMap($scope, networkContainer, imagesUrl, locale) {
             var visData = {
                 // TODO I would prefer to pass both as attrs instead of as a service.
                 // However, right now this is the most straightforward change.
@@ -28,32 +28,31 @@ angular.module('ptAnywhere')
                     cloudDevice : {
                         shape : 'image',
                         image : imagesUrl + '/cloud.png',
-                        size: 50,
+                        size: 50
                     },
                     routerDevice : {
                         shape : 'image',
                         image : imagesUrl + '/router_cropped.png',
-                        size: 45,
+                        size: 45
                     },
                     switchDevice : {
                         shape : 'image',
                         image : imagesUrl + '/switch_cropped.png',
-                        size: 35,
+                        size: 35
                     },
                     pcDevice : {
                         shape : 'image',
                         image : imagesUrl + '/pc_cropped.png',
-                        size: 45,
+                        size: 45
                     }
                 },
-                manipulation: getManipulationOptions($scope),
+                manipulation: getManipulationOptions($scope, locale),
                 locale: 'ptAnywhere',
                 locales: {
                     ptAnywhere: res.manipulationMenu
                 }
             };
-            var container = $element.find('div')[0];
-            return new vis.Network(container, visData, options);
+            return new vis.Network(networkContainer, visData, options);
         }
 
         function getSelectedNode() {
@@ -119,7 +118,19 @@ angular.module('ptAnywhere')
             return network.DOMtoCanvas({x: x, y: y});
         }
 
-        function getManipulationOptions($scope) {
+        /* BEGIN tweak to vis.js */
+        /* (Ugly) It uses jQuery to add a status message in vis.js manipulation menu. */
+        function showStatus(msg) {
+            $('div.vis-manipulation').append('<div class="statusMsg vis-button vis-none"><div class="vis-label text-warning">' + msg + '</p></div>');
+            $('div.statusMsg').fadeIn('slow');
+        }
+        function showTemporaryStatus(msg) {
+            $('div.vis-manipulation').append('<div class="statusMsg vis-button vis-none"><div class="vis-label text-danger">' + msg + '</p></div>');
+            $('div.statusMsg').fadeIn('slow').delay( 2000 ).fadeOut('slow');
+        }
+        /* END tweak to vis.js */
+
+        function getManipulationOptions($scope, locale) {
             var emptyFunction = function(data, callback) {};
             var addNode = emptyFunction;
             var addEdge = emptyFunction;
@@ -147,17 +158,22 @@ angular.module('ptAnywhere')
             }
             if ('onDeleteDevice' in $scope) {
                 deleteNode = function(data, callback) {
+                    showStatus(locale.deleteDevice.status);
                     // Always (data.nodes.length>0) && (data.edges.length==0)
                     // FIXME There might be more than a node selected...
                     $scope.onDeleteDevice({device: mapData.getNode(data.nodes[0])})
                             .then(function() {
                                 // This callback is important, otherwise it received 3 consecutive onDelete events.
                                 callback(data);
+                            }, function() {
+                                callback([]);
+                                showTemporaryStatus(locale.deleteDevice.error);
                             });
                 };
             }
             if ('onDeleteLink' in $scope) {
                 deleteEdge = function(data, callback) {
+                    showStatus(locale.deleteLink.status);
                     // Always (data.nodes.length==0) && (data.edges.length>0)
                     // TODO There might be more than an edge selected...
                     var edge = mapData.getEdge(data.edges[0]);
@@ -166,6 +182,9 @@ angular.module('ptAnywhere')
                             .then(function() {
                                 // This callback is important, otherwise it received 3 consecutive onDelete events.
                                 callback(data);
+                            }, function() {
+                                callback([]);
+                                showTemporaryStatus(locale.deleteLink.error);
                             });
                 };
             }
@@ -194,7 +213,8 @@ angular.module('ptAnywhere')
             },
             template: '<div class="map"></div>',
             link: function($scope, $element, $attrs) {
-                network = createNetworkMap($scope, $element, imagesUrl);
+                var container = $element.find('div')[0];
+                network = createNetworkMap($scope, container, imagesUrl, res);
                 $scope.$on('$destroy', function() {
                     network.destroy();
                 });

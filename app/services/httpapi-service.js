@@ -9,7 +9,7 @@ angular.module('ptAnywhere')
                 if (previousSessionId !== null) {
                     newSession.sameUserAsInSession = previousSessionId;
                 }
-                return $http.post(apiUrl + '/sessions', newSession, {timeout: 10000})
+                return $http.post(apiUrl + '/sessions', newSession, httpDefaults)
                             .then(function(response) {
                                 // Although "startSession" will be called afterwards and override this:
                                 sessionUrl = response.data;
@@ -146,12 +146,13 @@ angular.module('ptAnywhere')
     .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
         return {
             responseError: function(response) {
-                // TODO 404 or 410: sessionExpirationCallback (redirect to not_found)
-                if (response.status === 404 || response.status === 410) {
+                // Session does not exist or has expired if we get error 410.
+                if (response.status === 410) {
                     $location.path('/not-found');
+                } else {
+                    // Treat it normally...
+                    return $q.reject(response);
                 }
-                // E.g., session has expired and we get error 404 or 410
-                return $q.reject(response);
             }
         };
     }]);
