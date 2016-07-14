@@ -5,16 +5,16 @@
         <div class="clearfix form-group">
             <label for="{{modal.id}}FromIface" class="col-md-3 fromDeviceName">{{ fromDeviceName }}</label>
             <div class="col-md-9" ng-if="fromInterfaces !== null">
-                <select id="{{modal.id}}FromIface" class="form-control" size="1" ng-model="selected.fromIface"
-                        ng-options="iface.portName for iface in fromInterfaces">
+                <select id="{{modal.id}}FromIface" class="form-control input-lg" size="1"
+                        ng-model="selected.fromIface" ng-options="iface.portName for iface in fromInterfaces">
                 </select>
             </div>
         </div>
         <div class="clearfix form-group">
             <label for="{{modal.id}}ToIface" class="col-md-3 toDeviceName">{{ toDeviceName }}</label>
             <div class="col-md-9" ng-if="toInterfaces !== null">
-                <select id="{{modal.id}}ToIface" class="form-control" size="1" ng-model="selected.toIface"
-                        ng-options="iface.portName for iface in toInterfaces">
+                <select id="{{modal.id}}ToIface" class="form-control input-lg" size="1"
+                        ng-model="selected.toIface" ng-options="iface.portName for iface in toInterfaces">
                 </select>
             </div>
         </div>
