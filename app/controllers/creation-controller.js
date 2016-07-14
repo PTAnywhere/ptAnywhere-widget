@@ -21,11 +21,13 @@ angular.module('ptAnywhere')
 
         $scope.submit = function() {
             var newDevice = {
-                label: $scope.newDevice.name,
                 group: $scope.newDevice.type.value,
                 x: position[0],
                 y: position[1]
             };
+            if ($scope.newDevice.name !== '') {
+                newDevice.label = $scope.newDevice.name;
+            }
             $scope.submitError = null;
             api.addDevice(newDevice)
                 .then(function(device) {
