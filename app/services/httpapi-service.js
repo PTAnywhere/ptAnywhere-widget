@@ -3,6 +3,7 @@ angular.module('ptAnywhere')
                                         function($http, apiUrl, HttpRetry) {
         var sessionUrl = '';
         var httpDefaults = {timeout: 2000};
+        var longResponseTime = {timeout: 5000};
         return {
             createSession: function(fileToOpen, previousSessionId) {
                 var newSession = {fileUrl: fileToOpen};
@@ -27,7 +28,8 @@ angular.module('ptAnywhere')
                 var ifSuccess = function(response) { return response.data; };
                 HttpRetry.setSuccess(ifSuccess);
                 HttpRetry.setExplainer(errorExplainer);
-                return $http.get(sessionUrl + '/network', httpDefaults)
+                // This requests takes around 2 seconds...
+                return $http.get(sessionUrl + '/network', longResponseTime)
                             .then(ifSuccess, HttpRetry.responseError);
             },
             addDevice: function(newDevice) {
