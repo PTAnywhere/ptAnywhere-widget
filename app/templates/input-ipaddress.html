@@ -1,0 +1,7 @@
+<div class="clearfix form-group has-feedback" ng-class="{'has-error': formController.$invalid}">
+    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>
+    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"
+           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >
+    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>
+    <span id="{{ id }}-error" class="sr-only">(error)</span>
+</div>

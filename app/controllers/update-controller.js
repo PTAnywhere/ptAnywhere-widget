@@ -3,7 +3,6 @@ angular.module('ptAnywhere')
                                      // Device is injected in $uiModal's resolve.
                                     function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
-        $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
         $scope.submitError = null;
         $scope.interfaces = null;
         $scope.interface = {

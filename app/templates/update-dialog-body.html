@@ -5,11 +5,10 @@
             <label for="{{ modal.id }}-name">{{ locale.name }}</label>
             <input type="text" ng-model="device.name" id="{{ modal.id }}-name" class="form-control input-lg" />
         </div>
-        <div class="clearfix form-group" ng-show="device.defaultGateway !== null"
-             ng-class="{'has-error': dialogForm.defaultgw.$invalid}">
-            <label for="{{ modal.id }}-default-gw" class="control-label">{{ locale.modificationDialog.defaultGW }}</label>
-            <input type="text" ng-model="device.defaultGateway" ng-pattern="ipAddrPattern"
-                   name="defaultgw" id="{{ modal.id }}-default-gw" class="form-control input-lg" />
+        <div class="inputIpAddress" ng-show="device.defaultGateway !== null"
+             id="{{ modal.id }}-default-gw" name="defaultgw"
+             ng-model="device.defaultGateway" form-controller="dialogForm.defaultgw">
+            {{ locale.modificationDialog.defaultGW }}
         </div>
     </uib-tab>
     <uib-tab>
@@ -24,15 +23,13 @@
             </div>
             <hr />
             <div class="clearfix form-group" ng-show="interface.ipAddr !== null">
-                <div class="clearfix form-group" ng-class="{'has-error': dialogForm.ipaddr.$invalid}">
-                    <label for="{{ modal.id }}-ipaddr" class="control-label">{{ locale.modificationDialog.ipAddress }}</label>
-                    <input type="text" ng-model="interface.ipAddr" ng-pattern="ipAddrPattern"
-                           name="ipaddr" id="{{ modal.id }}-ipaddr" class="form-control input-lg" />
+                <div class="inputIpAddress" id="{{ modal.id }}-ipaddr" name="ipaddr"
+                     ng-model="interface.ipAddr" form-controller="dialogForm.ipaddr">
+                    {{ locale.modificationDialog.ipAddress }}
                 </div>
-                <div class="clearfix form-group" ng-class="{'has-error': dialogForm.subnet.$invalid}">
-                    <label for="{{ modal.id }}-subnet" class="control-label">{{ locale.modificationDialog.subnetMask }}</label>
-                    <input type="text" ng-model="interface.subnet" ng-pattern="ipAddrPattern"
-                           name="subnet" id="{{ modal.id }}-subnet" class="form-control input-lg"/>
+                <div class="inputIpAddress" id="{{ modal.id }}-subnet" name="subnet"
+                     ng-model="interface.subnet" form-controller="dialogForm.subnet">
+                    {{ locale.modificationDialog.subnetMask }}
                 </div>
             </div>
             <div class="clearfix form-group" ng-show="interface.ipAddr === null">
