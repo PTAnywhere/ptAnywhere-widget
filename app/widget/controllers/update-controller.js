@@ -1,5 +1,5 @@
-angular.module('ptAnywhere')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService', 'device',
+angular.module('ptAnywhere.widget')
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
                                      // Device is injected in $uiModal's resolve.
                                     function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;

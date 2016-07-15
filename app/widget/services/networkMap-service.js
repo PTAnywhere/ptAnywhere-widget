@@ -1,4 +1,4 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .factory('NetworkMapData', [function() {
         var loaded = false;
         var nodes = new vis.DataSet();

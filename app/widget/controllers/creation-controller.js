@@ -1,6 +1,6 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
-                                        'PTAnywhereAPIService', 'position',
+                                        'HttpApiService', 'position',
                                     function($log, $scope, $uibModalInstance, locale, api, position) {
         $scope.submitError = null;
         $scope.locale = locale;

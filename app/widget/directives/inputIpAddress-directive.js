@@ -1,4 +1,4 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .directive('inputIpAddress', [function() {
 
         return {

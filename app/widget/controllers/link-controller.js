@@ -1,5 +1,5 @@
-angular.module('ptAnywhere')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService',
+angular.module('ptAnywhere.widget')
+    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService',
                                     'fromDevice', 'toDevice',
                                     function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;

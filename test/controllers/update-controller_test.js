@@ -1,9 +1,11 @@
 describe('update controller', function() {
-    beforeEach(module('ptAnywhere.locale'));
-    beforeEach(module('ptAnywhere'));
+    /*beforeEach(module('ptAnywhere'));
+    beforeEach(module('ptAnywhere.api.http'));
+    beforeEach(module('ptAnywhere.locale'));*/
+    beforeEach(module('ptAnywhere.widget'));
 
     var ctrl, scope;
-    beforeEach(inject(function($controller, $rootScope, locale_en) {
+    beforeEach(inject(function($controller, $rootScope) {
         scope = $rootScope.$new();
         ctrl = $controller('UpdateController', {
             $scope: scope,

@@ -1,4 +1,4 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 

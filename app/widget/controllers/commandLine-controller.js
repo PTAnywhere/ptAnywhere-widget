@@ -1,4 +1,4 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
                                           function($scope, $uibModalInstance, locale, endpoint) {
         $scope.title = locale.commandLineDialog.title;

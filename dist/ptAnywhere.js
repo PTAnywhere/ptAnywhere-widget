@@ -3,31 +3,33 @@
  * @version v2.0.1
  * @link http://pt-anywhere.kmi.open.ac.uk
  */
-angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
+angular.module('ptAnywhere', []);
+//angular.module('ptAnywhere.api', ['ptAnywhere.api.http', 'ptAnywhere.api.websocket']);
+
+angular.module('ptAnywhere.api.http', ['ptAnywhere'])
+    .config(['$injector', '$provide', function($injector, $provide) {
+        var $log = console; // FIXME Apparently $log injection does not work in my tests.
+        var constantName = 'url';
+        var valueIfUndefined = '';
+        try {
+            $injector.get(constantName);
+            //constant exists
+        } catch(e) {
+            $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
+            $provide.constant(constantName, valueIfUndefined);  // Set default value
+        }
+    }])
+    .config(['$httpProvider', function($httpProvider) {
+        $httpProvider.interceptors.push('HttpErrorsInterceptor');
+    }]);
+angular.module('ptAnywhere.locale', [])
     .config(['$injector', '$provide', function($injector, $provide) {
         $log = console;  // FIXME Apparently $log injection does not work in my tests.
-
-        // Let's make sure that the following config sections have the constants available even
-        // when they have not been defined by the user.
-        var constants = {
-            baseUrl: '',
-            imagesUrl: '',
-            apiUrl: ''
-        };
-        for (var constantName in constants) {
-            try {
-                $injector.get(constantName);  // TODO Would $injector.has() work too?
-                //constant exists
-            } catch(e) {
-                $log.log('Setting default value for non existing "baseUrl" constant: "' + constants[constantName] + '"');
-                $provide.constant(constantName, constants[constantName]);  // Set default value
-            }
-        }
 
         // default selection (this constant is already provided in the distributed JS).
         var selectedLocale = 'locale_en';
         try {
-            selectedLocale = $injector.get('useLocale');
+            selectedLocale = $injector.get('use');
         } catch(e) {
             $log.debug('Locales to use were not defined: using default ones.');
         }
@@ -40,9 +42,118 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
         } catch(e) {
             $log.error('Locales to use could not be loaded from constant:' + selectedLocale + '.');
         }
-    }])
-    .config(['$httpProvider', function($httpProvider) {
-        $httpProvider.interceptors.push('HttpErrorsInterceptor');
+    }]);
+angular.module('ptAnywhere.locale')
+    // Constant instead of value because it will be used in config.
+    .constant('locale_en', {
+        loading: 'Loading...',
+        loadingInfo: 'Loading info...',
+        name: 'Name',
+        manipulationMenu: {
+            edit: 'Edit',
+            del: 'Delete selected',
+            back: 'Back',
+            addNode: 'Add Device',
+            addEdge: 'Connect Devices',
+            editNode: 'Edit Device',
+            addDescription: 'Click in an empty space to place a new device.',
+            edgeDescription: 'Click on a node and drag the edge to another element to connect them.',
+            // BEGIN: Unused
+            editEdge: 'Edit Edge',
+            editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
+            createEdgeError: 'Cannot link edges to a cluster.',
+            deleteClusterError: 'Clusters cannot be deleted.',
+            editClusterError: 'Clusters cannot be edited.'
+            // END: Unused
+        },
+        session: {
+            creating: {
+                title: 'Creating new session...'
+            },
+            notFound: {
+                title: 'Topology not found',
+                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
+                         '<p><a href="#/">Click here</a> to initiate a new one.</p>'
+            },
+            unavailable: {
+                title: 'Unavailable PT instances',
+                content: '<p>Sorry, there are <b>no Packet Tracer instances available</b> right now to initiate a session.</p>' +
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
+            },
+            genericError: {
+                title: 'Error creating PT instance',
+                content: '<p>Sorry, there was an error initiating the session.</p>' +
+                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
+            }
+        },
+        network: {
+            loading: 'Loading network...',
+            attempt: 'Attempt',
+            errorUnavailable: 'Instance not yet available',
+            errorTimeout: 'Timeout',
+            errorUnknown: 'Unknown error',
+            notLoaded: {
+                title: 'Topology not found',
+                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
+                         '<p><a href="?session">Click here</a> to initiate a new one.</p>'
+            }
+        },
+        deleteDevice: {
+            status: 'Deleting device...',
+            error: 'The device could not be deleted.'
+        },
+        deleteLink: {
+            status: 'Deleting link...',
+            error: 'The link could not be deleted.'
+        },
+        creationMenu: {
+            legend: 'To create a new device, drag it to the network map'
+        },
+        creationDialog: {
+            title: 'Create new device',
+            type: 'Device type'
+        },
+        linkDialog: {
+            title: 'Connect two devices',
+            select: 'Please select which ports to connect...',
+            error: {
+                loading: 'Problem loading the interfaces for this device. Please, try it again.',
+                unavailability: 'One of the devices you are trying to link has no available interfaces.',
+                creation: 'Sorry, something went wrong during the link creation.'
+            }
+        },
+        modificationDialog: {
+            title: 'Modify device',
+            globalSettings: 'Global Settings',
+            interfaces: 'Interfaces',
+            defaultGW: 'Default gateway',
+            ipAddress: 'IP address',
+            subnetMask: 'Subnet mask',
+            noSettings: 'No settings can be specified for this type of interface.'
+        },
+        commandLineDialog: {
+            title: 'Command line'
+        }
+    });
+
+angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http'])
+    .config(['$injector', '$provide', function($injector, $provide) {
+        // Let's make sure that the following config sections have the constants available even
+        // when they have not been defined by the user.
+        var defaults = {
+            baseUrl: '',
+            imagesUrl: ''
+        };
+        for (var constantName in defaults) {
+            try {
+                $injector.get(constantName);
+                //constant exists
+            } catch(e) {
+                var valueIfUndefined = defaults[constantName];
+                $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
+                $provide.constant(constantName, valueIfUndefined);  // Set default value
+            }
+        }
     }])
     .config(['$routeProvider', 'locale',  function($routeProvider, locale) {
         function createSimpleTemplate(message) {
@@ -64,7 +175,166 @@ angular.module('ptAnywhere', ['ngRoute', 'ui.bootstrap'])
             templateUrl: 'main-widget.html'
         }).otherwise('/');
     }]);
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.api.http')
+    .factory('HttpApiService', ['$http', 'url', 'HttpRetryService', function($http, apiUrl, HttpRetry) {
+        var sessionUrl = '';
+        var httpDefaults = {timeout: 2000};
+        var longResponseTime = {timeout: 5000};
+        return {
+            createSession: function(fileToOpen, previousSessionId) {
+                var newSession = {fileUrl: fileToOpen};
+                if (previousSessionId !== null) {
+                    newSession.sameUserAsInSession = previousSessionId;
+                }
+                return $http.post(apiUrl + '/sessions', newSession, httpDefaults)
+                            .then(function(response) {
+                                // Although "startSession" will be called afterwards and override this:
+                                sessionUrl = response.data;
+
+                                var chunks = response.data.split('/');
+                                var sessionId = chunks[chunks.length - 1];
+                                return sessionId;
+                            });
+            },
+            startSession: function(sessionId) {
+                sessionUrl = apiUrl + '/sessions/' + sessionId;  // Building the URL manually :-(
+            },
+            getNetwork: function(errorExplainer) {
+                // We want to process the same function no matter the number of attempt (/retry)
+                var ifSuccess = function(response) { return response.data; };
+                HttpRetry.setSuccess(ifSuccess);
+                HttpRetry.setExplainer(errorExplainer);
+                // This requests takes around 2 seconds...
+                return $http.get(sessionUrl + '/network', longResponseTime)
+                            .then(ifSuccess, HttpRetry.responseError);
+            },
+            addDevice: function(newDevice) {
+                return $http.post(sessionUrl + '/devices', newDevice, httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            removeDevice: function(device) {
+                return $http.delete(device.url, httpDefaults);
+            },
+            modifyDevice: function(device, deviceLabel, defaultGateway) {
+                // General settings: PUT to /devices/id
+                var modification = {label: deviceLabel};
+                if (defaultGateway !== '') {
+                    modification.defaultGateway = defaultGateway;
+                }
+                return $http.put(device.url, modification, httpDefaults)
+                            .then(function(response) {
+                                // FIXME This patch wouldn't be necessary if PTPIC library worked properly.
+                                var modifiedDevice = response.data;
+                                modifiedDevice.defaultGateway = defaultGateway;
+                                return modifiedDevice;
+                            });
+            },
+            modifyPort: function(portURL, ipAddress, subnetMask) {
+                // Send new IP settings
+                var modification = {
+                  portIpAddress: ipAddress,
+                  portSubnetMask: subnetMask
+                };
+                return $http.put(portURL, modification, httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            getAllPorts: function(device) {
+                return $http.get(device.url + 'ports', httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            getAvailablePorts: function(device) {
+                return $http.get(device.url + 'ports?free=true', httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            createLink: function(fromPortURL, toPortURL) {
+                var modification = {
+                  toPort: toPortURL
+                };
+                return $http.post(fromPortURL + 'link', modification, httpDefaults)
+                            .then(function(response) {
+                                return response.data;
+                            });
+            },
+            removeLink: function(link) {
+                return $http.get(link.url, httpDefaults)
+                        .then(function(response) {
+                            // Any of the two endpoints would work for us.
+                            return $http.delete(response.data.endpoints[0] + 'link');
+                        });
+            }
+        };
+    }]);
+angular.module('ptAnywhere.api.http')
+    .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
+        return {
+            responseError: function(response) {
+                // Session does not exist or has expired if we get error 410.
+                if (response.status === 410) {
+                    $location.path('/not-found');  // TODO uncouple
+                }
+                return $q.reject(response);
+            }
+        };
+    }]);
+angular.module('ptAnywhere.api.http')
+    .factory('HttpRetryService', ['$http', '$q', '$timeout', '$location', 'locale',
+                           function($http, $q, $timeout, $location, res) {
+        var tryCount = 0;
+        var maxRetries = 5;
+        var successCall = null;
+        var errorExplainer = null;
+
+        function retry(httpConfig, waitForNextRetry) {
+            return $timeout(function() {
+                        return $http(httpConfig).then(successCall, checkError);
+                    }, waitForNextRetry);
+        }
+
+        function getErrorExplanation(responseStatus) {
+            var errorMessage;
+            switch (responseStatus) {
+                case 503: errorMessage = res.network.errorUnavailable;
+                          break;
+                case 0: errorMessage = res.network.errorTimeout;
+                        break;
+                default: errorMessage = res.network.errorUnknown;
+            }
+            return errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.';
+        }
+
+        function checkError(response) {
+            if (response.status === 0 || response.status === 503) {
+                if (tryCount < maxRetries) {
+                    // If timeout, let's try it again is without waiting.
+                    var delay = (response.status === 0)? 0 : 2000;
+                    tryCount++;
+                    errorExplainer( getErrorExplanation(response.status) );
+                    return retry(response.config, delay);
+                }
+            }
+            // E.g., session has expired and we get error 404 or 410
+            return $q.reject(response);
+        }
+
+        return {
+            responseError: checkError,
+            setSuccess: function(success) {
+                successCall = success;
+            },
+            setExplainer: function(explainer) {
+                errorExplainer = explainer;
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget')
     .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
                                           function($scope, $uibModalInstance, locale, endpoint) {
         $scope.title = locale.commandLineDialog.title;
@@ -73,9 +343,9 @@ angular.module('ptAnywhere')
             $uibModalInstance.dismiss('cancel');
         };
     }]);
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
-                                        'PTAnywhereAPIService', 'position',
+                                        'HttpApiService', 'position',
                                     function($log, $scope, $uibModalInstance, locale, api, position) {
         $scope.submitError = null;
         $scope.locale = locale;
@@ -118,8 +388,8 @@ angular.module('ptAnywhere')
             $uibModalInstance.dismiss('cancel');
         };
     }]);
-angular.module('ptAnywhere')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService',
+angular.module('ptAnywhere.widget')
+    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService',
                                     'fromDevice', 'toDevice',
                                     function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;
@@ -162,11 +432,15 @@ angular.module('ptAnywhere')
                             if(!$scope.$$phase) {
                                 $scope.$apply();
                             }
-                        }, function(error) {
-                            $scope.loadError = '(error code: ' + error.status + ')';
-                            $log.error('Not loaded!', error);
-                            if(!$scope.$$phase) {
-                                $scope.$apply();
+                        }, function(response) {
+                            $log.error('Interfaces to be linked could not be loaded.', response);
+                            if (response.status === 410) {
+                                $uibModalInstance.dismiss('cancel');
+                            } else {
+                                $scope.loadError = '(error code: ' + response.status + ')';
+                                if(!$scope.$$phase) {
+                                    $scope.$apply();
+                                }
                             }
                         });
             }
@@ -208,8 +482,8 @@ angular.module('ptAnywhere')
 
         self._load();
     }]);
-angular.module('ptAnywhere')
-    .controller('SessionCreatorController', ['$location', 'PTAnywhereAPIService', 'fileToOpen',
+angular.module('ptAnywhere.widget')
+    .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
                                               function($location, api, fileToOpen) {
         api.createSession(fileToOpen, null)
             .then(function(sessionId) {
@@ -222,7 +496,7 @@ angular.module('ptAnywhere')
                 }
             });
     }])
-    .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
+    .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
                                              'baseUrl', 'imagesUrl', 'locale',
                                              function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
         var self = this;
@@ -242,7 +516,7 @@ angular.module('ptAnywhere')
             });
     }])
     .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
-                                     'NetworkMapData', 'PTAnywhereAPIService',
+                                     'NetworkMapData', 'HttpApiService',
                                      function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
         var self = this;
         var modalInstance;
@@ -358,8 +632,8 @@ angular.module('ptAnywhere')
             };
         }
     }]);
-angular.module('ptAnywhere')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'PTAnywhereAPIService', 'device',
+angular.module('ptAnywhere.widget')
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
                                      // Device is injected in $uiModal's resolve.
                                     function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
@@ -407,8 +681,9 @@ angular.module('ptAnywhere')
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
-                }, function() {
-                    $scope.submitError = 'Ports for the device ' + deviceToEdit.id + ' could not be loaded. Possible timeout.';
+                }, function(response) {
+                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
+                    $uibModalInstance.dismiss('cancel');
                 });
         };
 
@@ -465,7 +740,72 @@ angular.module('ptAnywhere')
 
         self._load();
     }]);
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
+    .factory('NetworkMapData', [function() {
+        var loaded = false;
+        var nodes = new vis.DataSet();
+        var edges = new vis.DataSet();
+
+        return {
+            load: function(initialData) {
+                loaded = true;
+                if (initialData.devices !== null) {
+                    nodes.clear();
+                    nodes.add(initialData.devices);
+                }
+                if (initialData.edges !== null) {
+                    edges.clear();
+                    edges.add(initialData.edges);
+                }
+            },
+            isLoaded: function() {
+                return loaded;
+            },
+            getNode: function(nodeId) {
+                return nodes.get(nodeId);
+            },
+            updateNode: function(node) {
+                nodes.update(node);
+            },
+            addNode: function(node) {
+                return nodes.add(node);
+            },
+            getNodes: function() {
+                return nodes;
+            },
+            getEdge: function(edgeId) {
+                return edges.get(edgeId);
+            },
+            getEdges: function() {
+                return edges;
+            },
+            connect: function(fromDevice, toDevice, linkId, linkUrl, fromPortName, toPortName) {
+                // FIXME unify the way to connect devices
+                var newEdge;
+                if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
+                    // Alternative used mainly in the replayer
+                    newEdge = { from: getByName(fromDevice).id, to: getByName(toDevice).id };
+                } else {
+                    // Alternative used in interactive widgets
+                    newEdge = { from: fromDevice.id, to: toDevice.id };
+                }
+                if (linkId !== undefined) {
+                    newEdge.id = linkId;
+                }
+                if (linkUrl !== undefined) {
+                    newEdge.url = linkUrl;
+                }
+                if (fromPortName !== undefined) {
+                    newEdge.fromLabel = fromPortName;
+                }
+                if (toPortName !== undefined) {
+                    newEdge.toLabel = toPortName;
+                }
+                edges.add(newEdge);
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget')
     .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
 
         function init($scope) {
@@ -562,7 +902,7 @@ angular.module('ptAnywhere')
             }
         };
     }]);
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .directive('inputIpAddress', [function() {
 
         return {
@@ -581,7 +921,7 @@ angular.module('ptAnywhere')
             }
         };
     }]);
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
     .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 
@@ -825,323 +1165,6 @@ angular.module('ptAnywhere')
                         }
                     });
                 }
-            }
-        };
-    }]);
-angular.module('ptAnywhere')
-    // Constant instead of value because it will be used in config.
-    .constant('locale_en', {
-        loading: 'Loading...',
-        loadingInfo: 'Loading info...',
-        name: 'Name',
-        manipulationMenu: {
-            edit: 'Edit',
-            del: 'Delete selected',
-            back: 'Back',
-            addNode: 'Add Device',
-            addEdge: 'Connect Devices',
-            editNode: 'Edit Device',
-            addDescription: 'Click in an empty space to place a new device.',
-            edgeDescription: 'Click on a node and drag the edge to another element to connect them.',
-            // BEGIN: Unused
-            editEdge: 'Edit Edge',
-            editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
-            createEdgeError: 'Cannot link edges to a cluster.',
-            deleteClusterError: 'Clusters cannot be deleted.',
-            editClusterError: 'Clusters cannot be edited.'
-            // END: Unused
-        },
-        session: {
-            creating: {
-                title: 'Creating new session...'
-            },
-            notFound: {
-                title: 'Topology not found',
-                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
-                         '<p><a href="#/">Click here</a> to initiate a new one.</p>'
-            },
-            unavailable: {
-                title: 'Unavailable PT instances',
-                content: '<p>Sorry, there are <b>no Packet Tracer instances available</b> right now to initiate a session.</p>' +
-                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
-            },
-            genericError: {
-                title: 'Error creating PT instance',
-                content: '<p>Sorry, there was an error initiating the session.</p>' +
-                         '<p>Please, wait a little bit and <a href="#/">try again</a>.</p>'
-            }
-        },
-        network: {
-            loading: 'Loading network...',
-            attempt: 'Attempt',
-            errorUnavailable: 'Instance not yet available',
-            errorTimeout: 'Timeout',
-            errorUnknown: 'Unknown error',
-            notLoaded: {
-                title: 'Topology not found',
-                content: '<p>The topology could not be loaded probably because the session does not exist (e.g., if it has expired).</p>' +
-                         '<p><a href="?session">Click here</a> to initiate a new one.</p>'
-            }
-        },
-        deleteDevice: {
-            status: 'Deleting device...',
-            error: 'The device could not be deleted.'
-        },
-        deleteLink: {
-            status: 'Deleting link...',
-            error: 'The link could not be deleted.'
-        },
-        creationMenu: {
-            legend: 'To create a new device, drag it to the network map'
-        },
-        creationDialog: {
-            title: 'Create new device',
-            type: 'Device type'
-        },
-        linkDialog: {
-            title: 'Connect two devices',
-            select: 'Please select which ports to connect...',
-            error: {
-                loading: 'Problem loading the interfaces for this device. Please, try it again.',
-                unavailability: 'One of the devices you are trying to link has no available interfaces.',
-                creation: 'Sorry, something went wrong during the link creation.'
-            }
-        },
-        modificationDialog: {
-            title: 'Modify device',
-            globalSettings: 'Global Settings',
-            interfaces: 'Interfaces',
-            defaultGW: 'Default gateway',
-            ipAddress: 'IP address',
-            subnetMask: 'Subnet mask',
-            noSettings: 'No settings can be specified for this type of interface.'
-        },
-        commandLineDialog: {
-            title: 'Command line'
-        }
-    });
-
-angular.module('ptAnywhere')
-    .factory('PTAnywhereAPIService', ['$http', 'apiUrl', 'HttpRetry',
-                                        function($http, apiUrl, HttpRetry) {
-        var sessionUrl = '';
-        var httpDefaults = {timeout: 2000};
-        var longResponseTime = {timeout: 10000};
-        return {
-            createSession: function(fileToOpen, previousSessionId) {
-                var newSession = {fileUrl: fileToOpen};
-                if (previousSessionId !== null) {
-                    newSession.sameUserAsInSession = previousSessionId;
-                }
-                return $http.post(apiUrl + '/sessions', newSession, httpDefaults)
-                            .then(function(response) {
-                                // Although "startSession" will be called afterwards and override this:
-                                sessionUrl = response.data;
-
-                                var chunks = response.data.split('/');
-                                var sessionId = chunks[chunks.length - 1];
-                                return sessionId;
-                            });
-            },
-            startSession: function(sessionId) {
-                sessionUrl = apiUrl + '/sessions/' + sessionId;  // Building the URL manually :-(
-            },
-            getNetwork: function(errorExplainer) {
-                // We want to process the same function no matter the number of attempt (/retry)
-                var ifSuccess = function(response) { return response.data; };
-                HttpRetry.setSuccess(ifSuccess);
-                HttpRetry.setExplainer(errorExplainer);
-                return $http.get(sessionUrl + '/network', longResponseTime)
-                            .then(ifSuccess, HttpRetry.responseError);
-            },
-            addDevice: function(newDevice) {
-                return $http.post(sessionUrl + '/devices', newDevice, httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
-            removeDevice: function(device) {
-                return $http.delete(device.url, httpDefaults);
-            },
-            modifyDevice: function(device, deviceLabel, defaultGateway) {
-                // General settings: PUT to /devices/id
-                var modification = {label: deviceLabel};
-                if (defaultGateway !== '') {
-                    modification.defaultGateway = defaultGateway;
-                }
-                return $http.put(device.url, modification, httpDefaults)
-                            .then(function(response) {
-                                // FIXME This patch wouldn't be necessary if PTPIC library worked properly.
-                                var modifiedDevice = response.data;
-                                modifiedDevice.defaultGateway = defaultGateway;
-                                return modifiedDevice;
-                            });
-            },
-            modifyPort: function(portURL, ipAddress, subnetMask) {
-                // Send new IP settings
-                var modification = {
-                  portIpAddress: ipAddress,
-                  portSubnetMask: subnetMask
-                };
-                return $http.put(portURL, modification, httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
-            getAllPorts: function(device) {
-                return $http.get(device.url + 'ports', httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
-            getAvailablePorts: function(device) {
-                return $http.get(device.url + 'ports?free=true', httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
-            createLink: function(fromPortURL, toPortURL) {
-                var modification = {
-                  toPort: toPortURL
-                };
-                return $http.post(fromPortURL + 'link', modification, httpDefaults)
-                            .then(function(response) {
-                                return response.data;
-                            });
-            },
-            removeLink: function(link) {
-                return $http.get(link.url, httpDefaults)
-                        .then(function(response) {
-                            // Any of the two endpoints would work for us.
-                            return $http.delete(response.data.endpoints[0] + 'link');
-                        });
-            }
-        };
-    }])
-    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale',
-                           function($http, $q, $timeout, $location, res) {
-        var tryCount = 0;
-        var maxRetries = 5;
-        var successCall = null;
-        var errorExplainer = null;
-
-        function retry(httpConfig, waitForNextRetry) {
-            return $timeout(function() {
-                        return $http(httpConfig).then(successCall, checkError);
-                    }, waitForNextRetry);
-        }
-
-        function getErrorExplanation(responseStatus) {
-            var errorMessage;
-            switch (responseStatus) {
-                case 503: errorMessage = res.network.errorUnavailable;
-                          break;
-                case 0: errorMessage = res.network.errorTimeout;
-                        break;
-                default: errorMessage = res.network.errorUnknown;
-            }
-            return errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.';
-        }
-
-        function checkError(response) {
-            if (response.status === 0 || response.status === 503) {
-                if (tryCount < maxRetries) {
-                    // If timeout, let's try it again is without waiting.
-                    var delay = (response.status === 0)? 0 : 2000;
-                    tryCount++;
-                    errorExplainer( getErrorExplanation(response.status) );
-                    return retry(response.config, delay);
-                }
-            }
-            // E.g., session has expired and we get error 404 or 410
-            return $q.reject(response);
-        }
-
-        return {
-            responseError: checkError,
-            setSuccess: function(success) {
-                successCall = success;
-            },
-            setExplainer: function(explainer) {
-                errorExplainer = explainer;
-            }
-        };
-    }])
-    .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
-        return {
-            responseError: function(response) {
-                // Session does not exist or has expired if we get error 410.
-                if (response.status === 410) {
-                    $location.path('/not-found');
-                } else {
-                    // Treat it normally...
-                    return $q.reject(response);
-                }
-            }
-        };
-    }]);
-angular.module('ptAnywhere')
-    .factory('NetworkMapData', [function() {
-        var loaded = false;
-        var nodes = new vis.DataSet();
-        var edges = new vis.DataSet();
-
-        return {
-            load: function(initialData) {
-                loaded = true;
-                if (initialData.devices !== null) {
-                    nodes.clear();
-                    nodes.add(initialData.devices);
-                }
-                if (initialData.edges !== null) {
-                    edges.clear();
-                    edges.add(initialData.edges);
-                }
-            },
-            isLoaded: function() {
-                return loaded;
-            },
-            getNode: function(nodeId) {
-                return nodes.get(nodeId);
-            },
-            updateNode: function(node) {
-                nodes.update(node);
-            },
-            addNode: function(node) {
-                return nodes.add(node);
-            },
-            getNodes: function() {
-                return nodes;
-            },
-            getEdge: function(edgeId) {
-                return edges.get(edgeId);
-            },
-            getEdges: function() {
-                return edges;
-            },
-            connect: function(fromDevice, toDevice, linkId, linkUrl, fromPortName, toPortName) {
-                // FIXME unify the way to connect devices
-                var newEdge;
-                if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
-                    // Alternative used mainly in the replayer
-                    newEdge = { from: getByName(fromDevice).id, to: getByName(toDevice).id };
-                } else {
-                    // Alternative used in interactive widgets
-                    newEdge = { from: fromDevice.id, to: toDevice.id };
-                }
-                if (linkId !== undefined) {
-                    newEdge.id = linkId;
-                }
-                if (linkUrl !== undefined) {
-                    newEdge.url = linkUrl;
-                }
-                if (fromPortName !== undefined) {
-                    newEdge.fromLabel = fromPortName;
-                }
-                if (toPortName !== undefined) {
-                    newEdge.toLabel = toPortName;
-                }
-                edges.add(newEdge);
             }
         };
     }]);

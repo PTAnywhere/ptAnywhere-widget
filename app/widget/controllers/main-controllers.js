@@ -1,5 +1,5 @@
-angular.module('ptAnywhere')
-    .controller('SessionCreatorController', ['$location', 'PTAnywhereAPIService', 'fileToOpen',
+angular.module('ptAnywhere.widget')
+    .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
                                               function($location, api, fileToOpen) {
         api.createSession(fileToOpen, null)
             .then(function(sessionId) {
@@ -12,7 +12,7 @@ angular.module('ptAnywhere')
                 }
             });
     }])
-    .controller('SessionLoadingController', ['$location', '$routeParams', 'PTAnywhereAPIService', 'NetworkMapData',
+    .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
                                              'baseUrl', 'imagesUrl', 'locale',
                                              function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
         var self = this;
@@ -32,7 +32,7 @@ angular.module('ptAnywhere')
             });
     }])
     .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
-                                     'NetworkMapData', 'PTAnywhereAPIService',
+                                     'NetworkMapData', 'HttpApiService',
                                      function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
         var self = this;
         var modalInstance;

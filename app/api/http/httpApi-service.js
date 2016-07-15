@@ -1,6 +1,5 @@
-angular.module('ptAnywhere')
-    .factory('PTAnywhereAPIService', ['$http', 'apiUrl', 'HttpRetry',
-                                        function($http, apiUrl, HttpRetry) {
+angular.module('ptAnywhere.api.http')
+    .factory('HttpApiService', ['$http', 'url', 'HttpRetryService', function($http, apiUrl, HttpRetry) {
         var sessionUrl = '';
         var httpDefaults = {timeout: 2000};
         var longResponseTime = {timeout: 5000};
@@ -93,66 +92,6 @@ angular.module('ptAnywhere')
                             // Any of the two endpoints would work for us.
                             return $http.delete(response.data.endpoints[0] + 'link');
                         });
-            }
-        };
-    }])
-    .factory('HttpRetry', ['$http', '$q', '$timeout', '$location', 'locale',
-                           function($http, $q, $timeout, $location, res) {
-        var tryCount = 0;
-        var maxRetries = 5;
-        var successCall = null;
-        var errorExplainer = null;
-
-        function retry(httpConfig, waitForNextRetry) {
-            return $timeout(function() {
-                        return $http(httpConfig).then(successCall, checkError);
-                    }, waitForNextRetry);
-        }
-
-        function getErrorExplanation(responseStatus) {
-            var errorMessage;
-            switch (responseStatus) {
-                case 503: errorMessage = res.network.errorUnavailable;
-                          break;
-                case 0: errorMessage = res.network.errorTimeout;
-                        break;
-                default: errorMessage = res.network.errorUnknown;
-            }
-            return errorMessage + '. ' + res.network.attempt + ' ' + tryCount + '/' + maxRetries + '.';
-        }
-
-        function checkError(response) {
-            if (response.status === 0 || response.status === 503) {
-                if (tryCount < maxRetries) {
-                    // If timeout, let's try it again is without waiting.
-                    var delay = (response.status === 0)? 0 : 2000;
-                    tryCount++;
-                    errorExplainer( getErrorExplanation(response.status) );
-                    return retry(response.config, delay);
-                }
-            }
-            // E.g., session has expired and we get error 404 or 410
-            return $q.reject(response);
-        }
-
-        return {
-            responseError: checkError,
-            setSuccess: function(success) {
-                successCall = success;
-            },
-            setExplainer: function(explainer) {
-                errorExplainer = explainer;
-            }
-        };
-    }])
-    .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
-        return {
-            responseError: function(response) {
-                // Session does not exist or has expired if we get error 410.
-                if (response.status === 410) {
-                    $location.path('/not-found');
-                }
-                return $q.reject(response);
             }
         };
     }]);
