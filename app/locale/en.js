@@ -1,4 +1,4 @@
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.locale')
     // Constant instead of value because it will be used in config.
     .constant('locale_en', {
         loading: 'Loading...',

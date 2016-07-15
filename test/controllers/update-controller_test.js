@@ -1,4 +1,5 @@
 describe('update controller', function() {
+    beforeEach(module('ptAnywhere.locale'));
     beforeEach(module('ptAnywhere'));
 
     var ctrl, scope;
