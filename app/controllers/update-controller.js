@@ -47,8 +47,9 @@ angular.module('ptAnywhere')
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
-                }, function() {
-                    $scope.submitError = 'Ports for the device ' + deviceToEdit.id + ' could not be loaded. Possible timeout.';
+                }, function(response) {
+                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
+                    $uibModalInstance.dismiss('cancel');
                 });
         };
 

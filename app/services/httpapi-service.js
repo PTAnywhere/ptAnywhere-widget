@@ -151,10 +151,8 @@ angular.module('ptAnywhere')
                 // Session does not exist or has expired if we get error 410.
                 if (response.status === 410) {
                     $location.path('/not-found');
-                } else {
-                    // Treat it normally...
-                    return $q.reject(response);
                 }
+                return $q.reject(response);
             }
         };
     }]);

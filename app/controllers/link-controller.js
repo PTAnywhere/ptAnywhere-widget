@@ -42,11 +42,15 @@ angular.module('ptAnywhere')
                             if(!$scope.$$phase) {
                                 $scope.$apply();
                             }
-                        }, function(error) {
-                            $scope.loadError = '(error code: ' + error.status + ')';
-                            $log.error('Not loaded!', error);
-                            if(!$scope.$$phase) {
-                                $scope.$apply();
+                        }, function(response) {
+                            $log.error('Interfaces to be linked could not be loaded.', response);
+                            if (response.status === 410) {
+                                $uibModalInstance.dismiss('cancel');
+                            } else {
+                                $scope.loadError = '(error code: ' + response.status + ')';
+                                if(!$scope.$$phase) {
+                                    $scope.$apply();
+                                }
                             }
                         });
             }
