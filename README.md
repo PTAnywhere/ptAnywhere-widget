@@ -18,7 +18,7 @@ Simply set one of these variables as constants:
 angular.module('ptAnywhere.locale').constant('use', 'locale_en');
 angular.module('ptAnywhere.api').constant('url', 'http://ptanywhere.kmi.open.ac.uk/api/v1');
 
-angular.module('ptAnywhere')
+angular.module('ptAnywhere.widget')
         .constant('baseUrl', '${base}')
         .constant('imagesUrl', '${base}/img')
         .constant('fileToOpen', '${fileToOpen}');
