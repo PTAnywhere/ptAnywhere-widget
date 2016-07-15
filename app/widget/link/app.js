@@ -1,0 +1,1 @@
+angular.module('ptAnywhere.widget.link', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);

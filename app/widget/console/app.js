@@ -1,0 +1,1 @@
+angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale']);

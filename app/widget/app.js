@@ -1,4 +1,8 @@
-angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http'])
+angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
+                                     'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http',
+                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create',
+                                     'ptAnywhere.widget.link', 'ptAnywhere.widget.map',
+                                     'ptAnywhere.widget.update'])
     .config(['$injector', '$provide', function($injector, $provide) {
         // Let's make sure that the following config sections have the constants available even
         // when they have not been defined by the user.

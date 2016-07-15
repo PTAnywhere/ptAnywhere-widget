@@ -1,7 +1,4 @@
 describe('update controller', function() {
-    /*beforeEach(module('ptAnywhere'));
-    beforeEach(module('ptAnywhere.api.http'));
-    beforeEach(module('ptAnywhere.locale'));*/
     beforeEach(module('ptAnywhere.widget'));
 
     var ctrl, scope;

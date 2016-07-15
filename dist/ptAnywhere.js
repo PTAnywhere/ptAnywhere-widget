@@ -136,7 +136,11 @@ angular.module('ptAnywhere.locale')
         }
     });
 
-angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http'])
+angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
+                                     'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http',
+                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create',
+                                     'ptAnywhere.widget.link', 'ptAnywhere.widget.map',
+                                     'ptAnywhere.widget.update'])
     .config(['$injector', '$provide', function($injector, $provide) {
         // Let's make sure that the following config sections have the constants available even
         // when they have not been defined by the user.
@@ -174,6 +178,274 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'ptAnywhere', 'p
         }).when('/s/:id', {
             templateUrl: 'main-widget.html'
         }).otherwise('/');
+    }]);
+angular.module('ptAnywhere.widget')
+    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
+
+        function init($scope) {
+            $scope.originalPosition = {
+                left: $scope.draggedSelector.css('left'),
+                top: $scope.draggedSelector.css('top')
+            };
+            $scope.draggedSelector.draggable({
+                helper: 'clone',
+                opacity: 0.4,
+                // The following properties interfere with the position I want to capture in the 'stop' event
+                /*revert: true, revertDuration: 2000,  */
+                start: function(event, ui) {
+                    $scope.draggedSelector.css({'opacity':'0.7'});
+                },
+                stop: function(event, ui) {
+                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
+                        var creatingIcon = initCreatingIcon(ui);
+                        var newDevice = getDevice($scope.type, ui.offset);
+                        $scope.onDrop({device: newDevice})
+                            .finally(function() {
+                                moveToStartPosition($scope);
+                                creatingIcon.remove();
+                            });
+                    } else {
+                        moveToStartPosition($scope);
+                    }
+                }
+            });
+        }
+
+        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
+        function collisionsWith(elementToCheck, possibleCollisionArea) {
+            var x1 = possibleCollisionArea.offset().left;
+            var y1 = possibleCollisionArea.offset().top;
+            var h1 = possibleCollisionArea.outerHeight(true);
+            var w1 = possibleCollisionArea.outerWidth(true);
+            var b1 = y1 + h1;
+            var r1 = x1 + w1;
+            var x2 = elementToCheck.offset().left;
+            var y2 = elementToCheck.offset().top;
+            var h2 = elementToCheck.outerHeight(true);
+            var w2 = elementToCheck.outerWidth(true);
+            var b2 = y2 + h2;
+            var r2 = x2 + w2;
+
+            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
+            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
+        }
+
+        function moveToStartPosition($scope) {
+            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
+                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
+                    left: $scope.originalPosition.left,
+                    top: $scope.originalPosition.top
+                });
+            });
+        }
+
+        function initCreatingIcon(ui) {
+            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
+            image.css('width', ui.helper.css('width'));
+            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
+            warning.prepend(image);
+            $('body').append(warning);
+            warning.css({position: 'absolute',
+                         left: ui.offset.left,
+                         top: ui.offset.top});
+            return warning;
+        }
+
+        function getDevice(deviceType, elementOffset) {
+            var x = elementOffset.left;
+            var y = elementOffset.top;
+            // We don't use the return
+            return {group: deviceType, x: x, y: y };
+        }
+
+        return {
+            restrict: 'C',
+            scope: {
+                alt: '@',
+                src: '@',
+                dragTo: '@',
+                type: '@',
+                onDrop: '&'  // callback(device);
+            },
+            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
+            link: function($scope, $element, $attrs) {
+                $scope.path = imagesUrl + '/' + $scope.src;
+                $scope.draggedSelector = $('img', $element);
+                $scope.dragToSelector = $($scope.dragTo);
+                init($scope);
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget')
+    .directive('inputIpAddress', [function() {
+
+        return {
+            restrict: 'C',
+            transclude: true,
+            scope: {
+                id: '@',
+                name: '@',
+                formController: '=',
+                value: '=ngModel'
+
+            },
+            templateUrl: 'input-ipaddress.html',
+            link: function($scope, $element, $attrs) {
+                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget')
+    .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
+                                              function($location, api, fileToOpen) {
+        api.createSession(fileToOpen, null)
+            .then(function(sessionId) {
+                $location.path('/loading/' + sessionId);
+            }, function(response) {
+                if (response.status === 503) {
+                    $location.path('/session-unavailable');
+                } else {
+                    $location.path('/session-error');
+                }
+            });
+    }]);
+angular.module('ptAnywhere.widget')
+    .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
+                                             'baseUrl', 'imagesUrl', 'locale',
+                                             function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
+        var self = this;
+        self.path = imagesUrl;
+        self.loading = loc.network.loading;
+        self.message = '';
+
+        api.startSession($routeParams.id);
+        api.getNetwork(function(errorExplanation) {
+                self.message = errorExplanation;
+            })
+            .then(function(network) {
+                mapData.load(network);
+                $location.path('/s/' + $routeParams.id);
+            }, function(response) {
+                $location.path('/not-found');
+            });
+    }]);
+angular.module('ptAnywhere.widget')
+    .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
+                                     'NetworkMapData', 'HttpApiService',
+                                     function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
+        var self = this;
+        var modalInstance;
+
+        if (!mapData.isLoaded()) {
+            $location.path('/loading/' + $routeParams.id);
+        } else {
+            self.openConsole = function(consoleEndpoint) {
+                var endpoint = 'console?endpoint=' + consoleEndpoint;
+                modalInstance = $uibModal.open({
+                    templateUrl: 'cmd-dialog.html',
+                    controller: 'CommandLineController',
+                    resolve: {
+                        endpoint: function () {
+                            return endpoint;
+                        }
+                    },
+                    windowClass: 'terminal-dialog'
+                });
+            };
+            self.onAddDevice = function(x, y) {
+                modalInstance = $uibModal.open({
+                    templateUrl: 'default-dialog.html',
+                    controller: 'CreationController',
+                    resolve: {
+                        position: function () {
+                            return [x, y];
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function(device) {
+                    mapData.addNode(device);
+                });
+            };
+            self.onAddLink = function(fromDevice, toDevice) {
+                modalInstance = $uibModal.open({
+                    templateUrl: 'default-dialog.html',
+                    controller: 'LinkController',
+                    //size: 'lg',
+                    resolve: {
+                        fromDevice: function () {
+                            return fromDevice;
+                        },
+                        toDevice: function () {
+                           return toDevice;
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function(ret) {
+                    mapData.connect(fromDevice, toDevice, ret.newLink.id, ret.newLink.url,
+                                    ret.fromPortName, ret.toPortName);
+                });
+            };
+            self.onEditDevice = function(device) {
+                modalInstance = $uibModal.open({
+                    templateUrl: 'default-dialog.html',
+                    controller: 'UpdateController',
+                    //size: 'lg',
+                    resolve: {
+                        device: function () {
+                            return device;
+                        }
+                    }
+                });
+
+                modalInstance.result.then(function (changedDevice) {
+                    if (changedDevice !== null) {  // If null, it means that the node didn't change
+                        mapData.updateNode(changedDevice);
+                    }
+                });
+            };
+            self.onDeleteDevice = function(node) {
+                return $q(function(resolve, reject) {
+                            api.removeDevice(node)
+                                .then(function() {
+                                    resolve();
+                                }, function(error) {
+                                    $log.error('Device removal.', error);
+                                    reject();
+                                });
+                        });
+            };
+            self.onDeleteLink = function(edge) {
+                return $q(function(resolve, reject) {
+                            api.removeLink(edge)
+                                .then(function() {
+                                    resolve();
+                                }, function() {
+                                    $log.error('Something went wrong in the link removal.');
+                                    reject();
+                                });
+                        });
+            };
+            self.onDrop = function(newDevice) {
+                return $q(function(resolve, reject) {
+                            // Adapt coordinates from DOM to canvas
+                            //  (function defined in the networkMap directive)
+                            var positionInMap = self.getNetworkCoordinates(newDevice.x, newDevice.y);
+                            newDevice.x = positionInMap.x;
+                            newDevice.y = positionInMap.y;
+
+                            api.addDevice(newDevice)
+                                .then(function(device) {
+                                    mapData.addNode(device);
+                                    resolve();
+                                }, function(error) {
+                                    $log.error('Device creation', error);
+                                    reject();
+                                });
+                      });
+            };
+        }
     }]);
 angular.module('ptAnywhere.api.http')
     .factory('HttpApiService', ['$http', 'url', 'HttpRetryService', function($http, apiUrl, HttpRetry) {
@@ -334,7 +606,8 @@ angular.module('ptAnywhere.api.http')
             }
         };
     }]);
-angular.module('ptAnywhere.widget')
+angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale']);
+angular.module('ptAnywhere.widget.console')
     .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
                                           function($scope, $uibModalInstance, locale, endpoint) {
         $scope.title = locale.commandLineDialog.title;
@@ -343,7 +616,8 @@ angular.module('ptAnywhere.widget')
             $uibModalInstance.dismiss('cancel');
         };
     }]);
-angular.module('ptAnywhere.widget')
+angular.module('ptAnywhere.widget.create', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget.create')
     .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
                                         'HttpApiService', 'position',
                                     function($log, $scope, $uibModalInstance, locale, api, position) {
@@ -388,7 +662,8 @@ angular.module('ptAnywhere.widget')
             $uibModalInstance.dismiss('cancel');
         };
     }]);
-angular.module('ptAnywhere.widget')
+angular.module('ptAnywhere.widget.link', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget.link')
     .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService',
                                     'fromDevice', 'toDevice',
                                     function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
@@ -482,446 +757,8 @@ angular.module('ptAnywhere.widget')
 
         self._load();
     }]);
-angular.module('ptAnywhere.widget')
-    .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
-                                              function($location, api, fileToOpen) {
-        api.createSession(fileToOpen, null)
-            .then(function(sessionId) {
-                $location.path('/loading/' + sessionId);
-            }, function(response) {
-                if (response.status === 503) {
-                    $location.path('/session-unavailable');
-                } else {
-                    $location.path('/session-error');
-                }
-            });
-    }])
-    .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
-                                             'baseUrl', 'imagesUrl', 'locale',
-                                             function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
-        var self = this;
-        self.path = imagesUrl;
-        self.loading = loc.network.loading;
-        self.message = '';
-
-        api.startSession($routeParams.id);
-        api.getNetwork(function(errorExplanation) {
-                self.message = errorExplanation;
-            })
-            .then(function(network) {
-                mapData.load(network);
-                $location.path('/s/' + $routeParams.id);
-            }, function(response) {
-                $location.path('/not-found');
-            });
-    }])
-    .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
-                                     'NetworkMapData', 'HttpApiService',
-                                     function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
-        var self = this;
-        var modalInstance;
-
-        if (!mapData.isLoaded()) {
-            $location.path('/loading/' + $routeParams.id);
-        } else {
-            self.openConsole = function(consoleEndpoint) {
-                var endpoint = 'console?endpoint=' + consoleEndpoint;
-                modalInstance = $uibModal.open({
-                    templateUrl: 'cmd-dialog.html',
-                    controller: 'CommandLineController',
-                    resolve: {
-                        endpoint: function () {
-                            return endpoint;
-                        }
-                    },
-                    windowClass: 'terminal-dialog'
-                });
-            };
-            self.onAddDevice = function(x, y) {
-                modalInstance = $uibModal.open({
-                    templateUrl: 'default-dialog.html',
-                    controller: 'CreationController',
-                    resolve: {
-                        position: function () {
-                            return [x, y];
-                        }
-                    }
-                });
-
-                modalInstance.result.then(function(device) {
-                    mapData.addNode(device);
-                });
-            };
-            self.onAddLink = function(fromDevice, toDevice) {
-                modalInstance = $uibModal.open({
-                    templateUrl: 'default-dialog.html',
-                    controller: 'LinkController',
-                    //size: 'lg',
-                    resolve: {
-                        fromDevice: function () {
-                            return fromDevice;
-                        },
-                        toDevice: function () {
-                           return toDevice;
-                        }
-                    }
-                });
-
-                modalInstance.result.then(function(ret) {
-                    mapData.connect(fromDevice, toDevice, ret.newLink.id, ret.newLink.url,
-                                    ret.fromPortName, ret.toPortName);
-                });
-            };
-            self.onEditDevice = function(device) {
-                modalInstance = $uibModal.open({
-                    templateUrl: 'default-dialog.html',
-                    controller: 'UpdateController',
-                    //size: 'lg',
-                    resolve: {
-                        device: function () {
-                            return device;
-                        }
-                    }
-                });
-
-                modalInstance.result.then(function (changedDevice) {
-                    if (changedDevice !== null) {  // If null, it means that the node didn't change
-                        mapData.updateNode(changedDevice);
-                    }
-                });
-            };
-            self.onDeleteDevice = function(node) {
-                return $q(function(resolve, reject) {
-                            api.removeDevice(node)
-                                .then(function() {
-                                    resolve();
-                                }, function(error) {
-                                    $log.error('Device removal.', error);
-                                    reject();
-                                });
-                        });
-            };
-            self.onDeleteLink = function(edge) {
-                return $q(function(resolve, reject) {
-                            api.removeLink(edge)
-                                .then(function() {
-                                    resolve();
-                                }, function() {
-                                    $log.error('Something went wrong in the link removal.');
-                                    reject();
-                                });
-                        });
-            };
-            self.onDrop = function(newDevice) {
-                return $q(function(resolve, reject) {
-                            // Adapt coordinates from DOM to canvas
-                            //  (function defined in the networkMap directive)
-                            var positionInMap = self.getNetworkCoordinates(newDevice.x, newDevice.y);
-                            newDevice.x = positionInMap.x;
-                            newDevice.y = positionInMap.y;
-
-                            api.addDevice(newDevice)
-                                .then(function(device) {
-                                    mapData.addNode(device);
-                                    resolve();
-                                }, function(error) {
-                                    $log.error('Device creation', error);
-                                    reject();
-                                });
-                      });
-            };
-        }
-    }]);
-angular.module('ptAnywhere.widget')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
-                                     // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
-        var self = this;
-        $scope.submitError = null;
-        $scope.interfaces = null;
-        $scope.interface = {
-            selected: null,
-            ipAddr: null,
-            subnet: null
-        };
-
-        $scope.locale = locale;
-        $scope.modal = {
-            id: 'modification-dialog',
-            title: locale.modificationDialog.title,
-            bodyTemplate: 'update-dialog-body.html',
-            hasSubmit: true
-        };
-        $scope.device = {
-            name: deviceToEdit.label,
-            defaultGateway: ('defaultGateway' in deviceToEdit)? deviceToEdit.defaultGateway: null
-        };
-
-        $scope.$watch('interfaces', function(newValue, oldValue) {
-            if (newValue !== null) {
-                $scope.interface.selected = newValue[0];
-            }
-        });
-
-        $scope.$watch('interface.selected', function(newValue, oldValue) {
-            if (newValue && ('portIpAddress' in newValue) && ('portSubnetMask' in newValue)) {
-                $scope.interface.ipAddr = newValue.portIpAddress;
-                $scope.interface.subnet = newValue.portSubnetMask;
-            } else {
-                // Not all the might have ip address and subnet.
-                $scope.interface.ipAddr = null;
-                $scope.interface.subnet = null;
-            }
-        });
-
-        self._load = function() {
-            api.getAllPorts(deviceToEdit)
-                .then(function(ports) {
-                    $scope.interfaces = ports;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
-                }, function(response) {
-                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
-                    $uibModalInstance.dismiss('cancel');
-                });
-        };
-
-        self._haveGlobalSettingsChanged = function() {
-            // TODO use $pristine instead
-            return ($scope.device.name != deviceToEdit.label) ||
-                   (('defaultGateway' in deviceToEdit) &&
-                    ($scope.device.defaultGateway != deviceToEdit.defaultGateway));
-        };
-
-        self._hasInterfaceChanged = function() {
-            // TODO use $pristine instead
-            return ($scope.interface.ipAddr !== null && $scope.interface.subnet !== null) &&
-                   ($scope.interface.ipAddr != $scope.interface.selected.portIpAddress ||
-                    $scope.interface.subnet != $scope.interface.selected.portSubnetMask);
-        };
-
-        $scope.submit = function() {
-            var update;
-            if (self._haveGlobalSettingsChanged()) {
-                update = api.modifyDevice(deviceToEdit, $scope.device.name, $scope.device.defaultGateway)
-                            .then(function(modifiedDevice) {
-                                return modifiedDevice;
-                            }, function(error) {
-                                $scope.submitError = 'Global settings could not be modified.';
-                                return error;
-                            });
-            } else {
-                update = Promise.resolve(null);  // No modification return.
-            }
-            // Sequential order as API cannot cope with simultaneous changes when device name is modified.
-            if (self._hasInterfaceChanged()) {
-                update = update.then(function(modifiedDevice) {
-                                        return api.modifyPort($scope.interface.selected.url,
-                                                              $scope.interface.ipAddr, $scope.interface.subnet)
-                                                  .then(function(port) {
-                                                      return modifiedDevice;
-                                                  }, function(error) {
-                                                      $scope.submitError = 'Interface details could not be modified.';
-                                                      return error;
-                                                  });
-                                    });
-            }
-            update.then(function(modifiedDevice) {
-                $uibModalInstance.close(modifiedDevice);
-            }, function(error) {
-                $log.error('Update(s) could not be performed.', error);
-            });
-        };
-
-        $scope.close = function () {
-            $uibModalInstance.dismiss('cancel');
-        };
-
-        self._load();
-    }]);
-angular.module('ptAnywhere.widget')
-    .factory('NetworkMapData', [function() {
-        var loaded = false;
-        var nodes = new vis.DataSet();
-        var edges = new vis.DataSet();
-
-        return {
-            load: function(initialData) {
-                loaded = true;
-                if (initialData.devices !== null) {
-                    nodes.clear();
-                    nodes.add(initialData.devices);
-                }
-                if (initialData.edges !== null) {
-                    edges.clear();
-                    edges.add(initialData.edges);
-                }
-            },
-            isLoaded: function() {
-                return loaded;
-            },
-            getNode: function(nodeId) {
-                return nodes.get(nodeId);
-            },
-            updateNode: function(node) {
-                nodes.update(node);
-            },
-            addNode: function(node) {
-                return nodes.add(node);
-            },
-            getNodes: function() {
-                return nodes;
-            },
-            getEdge: function(edgeId) {
-                return edges.get(edgeId);
-            },
-            getEdges: function() {
-                return edges;
-            },
-            connect: function(fromDevice, toDevice, linkId, linkUrl, fromPortName, toPortName) {
-                // FIXME unify the way to connect devices
-                var newEdge;
-                if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
-                    // Alternative used mainly in the replayer
-                    newEdge = { from: getByName(fromDevice).id, to: getByName(toDevice).id };
-                } else {
-                    // Alternative used in interactive widgets
-                    newEdge = { from: fromDevice.id, to: toDevice.id };
-                }
-                if (linkId !== undefined) {
-                    newEdge.id = linkId;
-                }
-                if (linkUrl !== undefined) {
-                    newEdge.url = linkUrl;
-                }
-                if (fromPortName !== undefined) {
-                    newEdge.fromLabel = fromPortName;
-                }
-                if (toPortName !== undefined) {
-                    newEdge.toLabel = toPortName;
-                }
-                edges.add(newEdge);
-            }
-        };
-    }]);
-angular.module('ptAnywhere.widget')
-    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
-
-        function init($scope) {
-            $scope.originalPosition = {
-                left: $scope.draggedSelector.css('left'),
-                top: $scope.draggedSelector.css('top')
-            };
-            $scope.draggedSelector.draggable({
-                helper: 'clone',
-                opacity: 0.4,
-                // The following properties interfere with the position I want to capture in the 'stop' event
-                /*revert: true, revertDuration: 2000,  */
-                start: function(event, ui) {
-                    $scope.draggedSelector.css({'opacity':'0.7'});
-                },
-                stop: function(event, ui) {
-                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
-                        var creatingIcon = initCreatingIcon(ui);
-                        var newDevice = getDevice($scope.type, ui.offset);
-                        $scope.onDrop({device: newDevice})
-                            .finally(function() {
-                                moveToStartPosition($scope);
-                                creatingIcon.remove();
-                            });
-                    } else {
-                        moveToStartPosition($scope);
-                    }
-                }
-            });
-        }
-
-        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
-        function collisionsWith(elementToCheck, possibleCollisionArea) {
-            var x1 = possibleCollisionArea.offset().left;
-            var y1 = possibleCollisionArea.offset().top;
-            var h1 = possibleCollisionArea.outerHeight(true);
-            var w1 = possibleCollisionArea.outerWidth(true);
-            var b1 = y1 + h1;
-            var r1 = x1 + w1;
-            var x2 = elementToCheck.offset().left;
-            var y2 = elementToCheck.offset().top;
-            var h2 = elementToCheck.outerHeight(true);
-            var w2 = elementToCheck.outerWidth(true);
-            var b2 = y2 + h2;
-            var r2 = x2 + w2;
-
-            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
-            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
-        }
-
-        function moveToStartPosition($scope) {
-            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
-                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
-                    left: $scope.originalPosition.left,
-                    top: $scope.originalPosition.top
-                });
-            });
-        }
-
-        function initCreatingIcon(ui) {
-            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
-            image.css('width', ui.helper.css('width'));
-            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
-            warning.prepend(image);
-            $('body').append(warning);
-            warning.css({position: 'absolute',
-                         left: ui.offset.left,
-                         top: ui.offset.top});
-            return warning;
-        }
-
-        function getDevice(deviceType, elementOffset) {
-            var x = elementOffset.left;
-            var y = elementOffset.top;
-            // We don't use the return
-            return {group: deviceType, x: x, y: y };
-        }
-
-        return {
-            restrict: 'C',
-            scope: {
-                alt: '@',
-                src: '@',
-                dragTo: '@',
-                type: '@',
-                onDrop: '&'  // callback(device);
-            },
-            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
-            link: function($scope, $element, $attrs) {
-                $scope.path = imagesUrl + '/' + $scope.src;
-                $scope.draggedSelector = $('img', $element);
-                $scope.dragToSelector = $($scope.dragTo);
-                init($scope);
-            }
-        };
-    }]);
-angular.module('ptAnywhere.widget')
-    .directive('inputIpAddress', [function() {
-
-        return {
-            restrict: 'C',
-            transclude: true,
-            scope: {
-                id: '@',
-                name: '@',
-                formController: '=',
-                value: '=ngModel'
-
-            },
-            templateUrl: 'input-ipaddress.html',
-            link: function($scope, $element, $attrs) {
-                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-            }
-        };
-    }]);
-angular.module('ptAnywhere.widget')
+angular.module('ptAnywhere.widget.map', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget.map')
     .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
 
@@ -1167,6 +1004,180 @@ angular.module('ptAnywhere.widget')
                 }
             }
         };
+    }]);
+angular.module('ptAnywhere.widget.map')
+    .factory('NetworkMapData', [function() {
+        var loaded = false;
+        var nodes = new vis.DataSet();
+        var edges = new vis.DataSet();
+
+        return {
+            load: function(initialData) {
+                loaded = true;
+                if (initialData.devices !== null) {
+                    nodes.clear();
+                    nodes.add(initialData.devices);
+                }
+                if (initialData.edges !== null) {
+                    edges.clear();
+                    edges.add(initialData.edges);
+                }
+            },
+            isLoaded: function() {
+                return loaded;
+            },
+            getNode: function(nodeId) {
+                return nodes.get(nodeId);
+            },
+            updateNode: function(node) {
+                nodes.update(node);
+            },
+            addNode: function(node) {
+                return nodes.add(node);
+            },
+            getNodes: function() {
+                return nodes;
+            },
+            getEdge: function(edgeId) {
+                return edges.get(edgeId);
+            },
+            getEdges: function() {
+                return edges;
+            },
+            connect: function(fromDevice, toDevice, linkId, linkUrl, fromPortName, toPortName) {
+                // FIXME unify the way to connect devices
+                var newEdge;
+                if (typeof fromDevice === 'string'  && typeof toDevice === 'string') {
+                    // Alternative used mainly in the replayer
+                    newEdge = { from: getByName(fromDevice).id, to: getByName(toDevice).id };
+                } else {
+                    // Alternative used in interactive widgets
+                    newEdge = { from: fromDevice.id, to: toDevice.id };
+                }
+                if (linkId !== undefined) {
+                    newEdge.id = linkId;
+                }
+                if (linkUrl !== undefined) {
+                    newEdge.url = linkUrl;
+                }
+                if (fromPortName !== undefined) {
+                    newEdge.fromLabel = fromPortName;
+                }
+                if (toPortName !== undefined) {
+                    newEdge.toLabel = toPortName;
+                }
+                edges.add(newEdge);
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget.update', ['ptAnywhere.locale', 'ptAnywhere.widget']);
+angular.module('ptAnywhere.widget.update')
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
+                                     // Device is injected in $uiModal's resolve.
+                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
+        var self = this;
+        $scope.submitError = null;
+        $scope.interfaces = null;
+        $scope.interface = {
+            selected: null,
+            ipAddr: null,
+            subnet: null
+        };
+
+        $scope.locale = locale;
+        $scope.modal = {
+            id: 'modification-dialog',
+            title: locale.modificationDialog.title,
+            bodyTemplate: 'update-dialog-body.html',
+            hasSubmit: true
+        };
+        $scope.device = {
+            name: deviceToEdit.label,
+            defaultGateway: ('defaultGateway' in deviceToEdit)? deviceToEdit.defaultGateway: null
+        };
+
+        $scope.$watch('interfaces', function(newValue, oldValue) {
+            if (newValue !== null) {
+                $scope.interface.selected = newValue[0];
+            }
+        });
+
+        $scope.$watch('interface.selected', function(newValue, oldValue) {
+            if (newValue && ('portIpAddress' in newValue) && ('portSubnetMask' in newValue)) {
+                $scope.interface.ipAddr = newValue.portIpAddress;
+                $scope.interface.subnet = newValue.portSubnetMask;
+            } else {
+                // Not all the might have ip address and subnet.
+                $scope.interface.ipAddr = null;
+                $scope.interface.subnet = null;
+            }
+        });
+
+        self._load = function() {
+            api.getAllPorts(deviceToEdit)
+                .then(function(ports) {
+                    $scope.interfaces = ports;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                }, function(response) {
+                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
+                    $uibModalInstance.dismiss('cancel');
+                });
+        };
+
+        self._haveGlobalSettingsChanged = function() {
+            // TODO use $pristine instead
+            return ($scope.device.name != deviceToEdit.label) ||
+                   (('defaultGateway' in deviceToEdit) &&
+                    ($scope.device.defaultGateway != deviceToEdit.defaultGateway));
+        };
+
+        self._hasInterfaceChanged = function() {
+            // TODO use $pristine instead
+            return ($scope.interface.ipAddr !== null && $scope.interface.subnet !== null) &&
+                   ($scope.interface.ipAddr != $scope.interface.selected.portIpAddress ||
+                    $scope.interface.subnet != $scope.interface.selected.portSubnetMask);
+        };
+
+        $scope.submit = function() {
+            var update;
+            if (self._haveGlobalSettingsChanged()) {
+                update = api.modifyDevice(deviceToEdit, $scope.device.name, $scope.device.defaultGateway)
+                            .then(function(modifiedDevice) {
+                                return modifiedDevice;
+                            }, function(error) {
+                                $scope.submitError = 'Global settings could not be modified.';
+                                return error;
+                            });
+            } else {
+                update = Promise.resolve(null);  // No modification return.
+            }
+            // Sequential order as API cannot cope with simultaneous changes when device name is modified.
+            if (self._hasInterfaceChanged()) {
+                update = update.then(function(modifiedDevice) {
+                                        return api.modifyPort($scope.interface.selected.url,
+                                                              $scope.interface.ipAddr, $scope.interface.subnet)
+                                                  .then(function(port) {
+                                                      return modifiedDevice;
+                                                  }, function(error) {
+                                                      $scope.submitError = 'Interface details could not be modified.';
+                                                      return error;
+                                                  });
+                                    });
+            }
+            update.then(function(modifiedDevice) {
+                $uibModalInstance.close(modifiedDevice);
+            }, function(error) {
+                $log.error('Update(s) could not be performed.', error);
+            });
+        };
+
+        $scope.close = function () {
+            $uibModalInstance.dismiss('cancel');
+        };
+
+        self._load();
     }]);
 angular.module('ptAnywhere').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header" style="height: 10%;">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ title }}\n    </h4>\n</div>\n<div class="modal-body" style="height: 89%;">\n    <div class="iframeWrapper">\n        <iframe class="terminal" src="{{ endpoint }}"></iframe>\n    </div>\n</div>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
