@@ -24,11 +24,7 @@ module.exports = function(config) {
 
 
     // list of files to exclude
-    exclude: [
-      // Old JS not AngularJS files
-      'app/console.js',
-      'app/widget.js'
-    ],
+    exclude: [],
 
 
     // preprocess matching files before serving them to the browser
