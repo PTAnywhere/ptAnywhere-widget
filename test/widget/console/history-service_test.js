@@ -46,7 +46,6 @@ describe('history service', function() {
             // Otherwise...
             history._moveIteratorToTheBeginning();
             for (i=1; i<testableHistory.length; i++) {
-                console.log(testableHistory[i]);
                 expect(history.getNextCommand()).toBe(testableHistory[i]);
             }
             expect(history.getNextCommand()).toBeNull();

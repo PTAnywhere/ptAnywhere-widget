@@ -17,7 +17,9 @@ module.exports = function(config) {
       'scripts/bower_components/angular-route/angular-route.min.js',
       'scripts/bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js',
       'scripts/bower_components/angular-mocks/angular-mocks.js',
-      'scripts/bower_components/vis/dist/vis.min.js',
+      'scripts/bower_components/angular-websocket/dist/angular-websocket.js',
+      'scripts/bower_components/angular-websocket/dist/angular-websocket-mock.js',
+      //'scripts/bower_components/vis/dist/**',
       'app/**',  // The files to be tested
       'test/**'  // The tests
     ],

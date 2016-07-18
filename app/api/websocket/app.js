@@ -1,0 +1,1 @@
+angular.module('ptAnywhere.api.websocket', ['ngWebSocket']);

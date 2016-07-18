@@ -1,6 +1,6 @@
 //angular.module('ptAnywhere.api', ['ptAnywhere.api.http', 'ptAnywhere.api.websocket']);
 
-angular.module('ptAnywhere.api.http', ['ptAnywhere'])
+angular.module('ptAnywhere.api.http', [])
     .config(['$injector', '$provide', function($injector, $provide) {
         var $log = console; // FIXME Apparently $log injection does not work in my tests.
         var constantName = 'url';

@@ -84,6 +84,7 @@ gulp.task('extract_dependencies', ['clean'], function () {
                         d + 'angular-route/angular-route.min.js',
                         d + 'angular-animate/angular-animate.min.js',
                         d + 'angular-bootstrap/ui-bootstrap-tpls.min.js',
+                        d + 'angular-websocket/angular-websocket.min.js',
                         // Bootstrap JS code is not needed as it is already included in the "Angular UI bootstrap"
                         // module included above.
                         // Bootstrap CSS files still needed
