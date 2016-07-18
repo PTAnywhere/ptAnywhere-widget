@@ -12,7 +12,4 @@ angular.module('ptAnywhere.api.http', ['ptAnywhere'])
             $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
             $provide.constant(constantName, valueIfUndefined);  // Set default value
         }
-    }])
-    .config(['$httpProvider', function($httpProvider) {
-        $httpProvider.interceptors.push('HttpErrorsInterceptor');
     }]);

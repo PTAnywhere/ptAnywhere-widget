@@ -18,9 +18,6 @@ angular.module('ptAnywhere.api.http', ['ptAnywhere'])
             $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
             $provide.constant(constantName, valueIfUndefined);  // Set default value
         }
-    }])
-    .config(['$httpProvider', function($httpProvider) {
-        $httpProvider.interceptors.push('HttpErrorsInterceptor');
     }]);
 angular.module('ptAnywhere.locale', [])
     .config(['$injector', '$provide', function($injector, $provide) {
@@ -137,28 +134,9 @@ angular.module('ptAnywhere.locale')
     });
 
 angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
-                                     'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http',
-                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create',
-                                     'ptAnywhere.widget.link', 'ptAnywhere.widget.map',
-                                     'ptAnywhere.widget.update'])
-    .config(['$injector', '$provide', function($injector, $provide) {
-        // Let's make sure that the following config sections have the constants available even
-        // when they have not been defined by the user.
-        var defaults = {
-            baseUrl: '',
-            imagesUrl: ''
-        };
-        for (var constantName in defaults) {
-            try {
-                $injector.get(constantName);
-                //constant exists
-            } catch(e) {
-                var valueIfUndefined = defaults[constantName];
-                $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
-                $provide.constant(constantName, valueIfUndefined);  // Set default value
-            }
-        }
-    }])
+                                     'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
+                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
+                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])
     .config(['$routeProvider', 'locale',  function($routeProvider, locale) {
         function createSimpleTemplate(message) {
             return '<div class="row message"><div class="col-md-8 col-md-offset-2 text-center">' +
@@ -178,122 +156,12 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
         }).when('/s/:id', {
             templateUrl: 'main-widget.html'
         }).otherwise('/');
-    }]);
-angular.module('ptAnywhere.widget')
-    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
-
-        function init($scope) {
-            $scope.originalPosition = {
-                left: $scope.draggedSelector.css('left'),
-                top: $scope.draggedSelector.css('top')
-            };
-            $scope.draggedSelector.draggable({
-                helper: 'clone',
-                opacity: 0.4,
-                // The following properties interfere with the position I want to capture in the 'stop' event
-                /*revert: true, revertDuration: 2000,  */
-                start: function(event, ui) {
-                    $scope.draggedSelector.css({'opacity':'0.7'});
-                },
-                stop: function(event, ui) {
-                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
-                        var creatingIcon = initCreatingIcon(ui);
-                        var newDevice = getDevice($scope.type, ui.offset);
-                        $scope.onDrop({device: newDevice})
-                            .finally(function() {
-                                moveToStartPosition($scope);
-                                creatingIcon.remove();
-                            });
-                    } else {
-                        moveToStartPosition($scope);
-                    }
-                }
-            });
-        }
-
-        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
-        function collisionsWith(elementToCheck, possibleCollisionArea) {
-            var x1 = possibleCollisionArea.offset().left;
-            var y1 = possibleCollisionArea.offset().top;
-            var h1 = possibleCollisionArea.outerHeight(true);
-            var w1 = possibleCollisionArea.outerWidth(true);
-            var b1 = y1 + h1;
-            var r1 = x1 + w1;
-            var x2 = elementToCheck.offset().left;
-            var y2 = elementToCheck.offset().top;
-            var h2 = elementToCheck.outerHeight(true);
-            var w2 = elementToCheck.outerWidth(true);
-            var b2 = y2 + h2;
-            var r2 = x2 + w2;
-
-            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
-            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
-        }
-
-        function moveToStartPosition($scope) {
-            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
-                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
-                    left: $scope.originalPosition.left,
-                    top: $scope.originalPosition.top
-                });
-            });
-        }
-
-        function initCreatingIcon(ui) {
-            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
-            image.css('width', ui.helper.css('width'));
-            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
-            warning.prepend(image);
-            $('body').append(warning);
-            warning.css({position: 'absolute',
-                         left: ui.offset.left,
-                         top: ui.offset.top});
-            return warning;
-        }
-
-        function getDevice(deviceType, elementOffset) {
-            var x = elementOffset.left;
-            var y = elementOffset.top;
-            // We don't use the return
-            return {group: deviceType, x: x, y: y };
-        }
-
-        return {
-            restrict: 'C',
-            scope: {
-                alt: '@',
-                src: '@',
-                dragTo: '@',
-                type: '@',
-                onDrop: '&'  // callback(device);
-            },
-            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
-            link: function($scope, $element, $attrs) {
-                $scope.path = imagesUrl + '/' + $scope.src;
-                $scope.draggedSelector = $('img', $element);
-                $scope.dragToSelector = $($scope.dragTo);
-                init($scope);
-            }
-        };
-    }]);
-angular.module('ptAnywhere.widget')
-    .directive('inputIpAddress', [function() {
-
-        return {
-            restrict: 'C',
-            transclude: true,
-            scope: {
-                id: '@',
-                name: '@',
-                formController: '=',
-                value: '=ngModel'
-
-            },
-            templateUrl: 'input-ipaddress.html',
-            link: function($scope, $element, $attrs) {
-                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-            }
-        };
+    }])
+    .config(['$httpProvider', function($httpProvider) {
+        $httpProvider.interceptors.push('HttpErrorInterceptor');
+    }])
+    .run(['HttpErrorInterceptor', function(interceptor) {
+        interceptor.setRedirectionPath('/not-found');
     }]);
 angular.module('ptAnywhere.widget')
     .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
@@ -311,8 +179,8 @@ angular.module('ptAnywhere.widget')
     }]);
 angular.module('ptAnywhere.widget')
     .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
-                                             'baseUrl', 'imagesUrl', 'locale',
-                                             function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
+                                             'imagesUrl', 'locale',
+                                             function($location, $routeParams, api, mapData, imagesUrl, loc) {
         var self = this;
         self.path = imagesUrl;
         self.loading = loc.network.loading;
@@ -545,12 +413,16 @@ angular.module('ptAnywhere.api.http')
         };
     }]);
 angular.module('ptAnywhere.api.http')
-    .factory('HttpErrorsInterceptor', ['$q', '$location', function($q, $location) {
+    .factory('HttpErrorInterceptor', ['$q', '$location', function($q, $location) {
+        var redirectionPath;
         return {
+            setRedirectionPath: function(path) {
+                redirectionPath = path;
+            },
             responseError: function(response) {
                 // Session does not exist or has expired if we get error 410.
                 if (response.status === 410) {
-                    $location.path('/not-found');  // TODO uncouple
+                    $location.path(redirectionPath);
                 }
                 return $q.reject(response);
             }
@@ -606,6 +478,24 @@ angular.module('ptAnywhere.api.http')
             }
         };
     }]);
+angular.module('ptAnywhere.widget.configuration', [])
+    .config(['$injector', '$provide', function($injector, $provide) {
+        // Let's make sure that the following config sections have the constants available even
+        // when they have not been defined by the user.
+        var defaults = {
+            imagesUrl: ''
+        };
+        for (var constantName in defaults) {
+            try {
+                $injector.get(constantName);
+                //constant exists
+            } catch(e) {
+                var valueIfUndefined = defaults[constantName];
+                $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
+                $provide.constant(constantName, valueIfUndefined);  // Set default value
+            }
+        }
+    }]);
 angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale']);
 angular.module('ptAnywhere.widget.console')
     .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
@@ -616,7 +506,8 @@ angular.module('ptAnywhere.widget.console')
             $uibModalInstance.dismiss('cancel');
         };
     }]);
-angular.module('ptAnywhere.widget.create', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget.create', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http',
+                                            'ptAnywhere.widget.configuration']);
 angular.module('ptAnywhere.widget.create')
     .controller('CreationController', ['$log', '$scope', '$uibModalInstance', 'locale',
                                         'HttpApiService', 'position',
@@ -660,6 +551,103 @@ angular.module('ptAnywhere.widget.create')
 
         $scope.close = function () {
             $uibModalInstance.dismiss('cancel');
+        };
+    }]);
+angular.module('ptAnywhere.widget.create')
+    .directive('draggableDevice', ['imagesUrl', function(imagesUrl) {
+
+        function init($scope) {
+            $scope.originalPosition = {
+                left: $scope.draggedSelector.css('left'),
+                top: $scope.draggedSelector.css('top')
+            };
+            $scope.draggedSelector.draggable({
+                helper: 'clone',
+                opacity: 0.4,
+                // The following properties interfere with the position I want to capture in the 'stop' event
+                /*revert: true, revertDuration: 2000,  */
+                start: function(event, ui) {
+                    $scope.draggedSelector.css({'opacity':'0.7'});
+                },
+                stop: function(event, ui) {
+                    if (collisionsWith(ui.helper, $scope.dragToSelector)) {
+                        var creatingIcon = initCreatingIcon(ui);
+                        var newDevice = getDevice($scope.type, ui.offset);
+                        $scope.onDrop({device: newDevice})
+                            .finally(function() {
+                                moveToStartPosition($scope);
+                                creatingIcon.remove();
+                            });
+                    } else {
+                        moveToStartPosition($scope);
+                    }
+                }
+            });
+        }
+
+        // Source: http://stackoverflow.com/questions/5419134/how-to-detect-if-two-divs-touch-with-jquery
+        function collisionsWith(elementToCheck, possibleCollisionArea) {
+            var x1 = possibleCollisionArea.offset().left;
+            var y1 = possibleCollisionArea.offset().top;
+            var h1 = possibleCollisionArea.outerHeight(true);
+            var w1 = possibleCollisionArea.outerWidth(true);
+            var b1 = y1 + h1;
+            var r1 = x1 + w1;
+            var x2 = elementToCheck.offset().left;
+            var y2 = elementToCheck.offset().top;
+            var h2 = elementToCheck.outerHeight(true);
+            var w2 = elementToCheck.outerWidth(true);
+            var b2 = y2 + h2;
+            var r2 = x2 + w2;
+
+            //if (b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2) return false;
+            return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
+        }
+
+        function moveToStartPosition($scope) {
+            $scope.draggedSelector.animate({opacity:'1'}, 1000, function() {
+                $scope.draggedSelector.css({ // would be great with an animation too, but it doesn't work
+                    left: $scope.originalPosition.left,
+                    top: $scope.originalPosition.top
+                });
+            });
+        }
+
+        function initCreatingIcon(ui) {
+            var image = $('<img alt="Temporary image" src="' + ui.helper.attr('src') + '">');
+            image.css('width', ui.helper.css('width'));
+            var warning = $('<div class="text-in-image"><span>Creating...</span></div>');
+            warning.prepend(image);
+            $('body').append(warning);
+            warning.css({position: 'absolute',
+                         left: ui.offset.left,
+                         top: ui.offset.top});
+            return warning;
+        }
+
+        function getDevice(deviceType, elementOffset) {
+            var x = elementOffset.left;
+            var y = elementOffset.top;
+            // We don't use the return
+            return {group: deviceType, x: x, y: y };
+        }
+
+        return {
+            restrict: 'C',
+            scope: {
+                alt: '@',
+                src: '@',
+                dragTo: '@',
+                type: '@',
+                onDrop: '&'  // callback(device);
+            },
+            template: '<img class="ui-draggable ui-draggable-handle" alt="{{ alt }}" ng-src="{{ path }}" />',
+            link: function($scope, $element, $attrs) {
+                $scope.path = imagesUrl + '/' + $scope.src;
+                $scope.draggedSelector = $('img', $element);
+                $scope.dragToSelector = $($scope.dragTo);
+                init($scope);
+            }
         };
     }]);
 angular.module('ptAnywhere.widget.link', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
@@ -757,7 +745,8 @@ angular.module('ptAnywhere.widget.link')
 
         self._load();
     }]);
-angular.module('ptAnywhere.widget.map', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget.map',
+                ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http', 'ptAnywhere.widget.configuration']);
 angular.module('ptAnywhere.widget.map')
     .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
         var network;
@@ -1070,7 +1059,26 @@ angular.module('ptAnywhere.widget.map')
             }
         };
     }]);
-angular.module('ptAnywhere.widget.update', ['ptAnywhere.locale', 'ptAnywhere.widget']);
+angular.module('ptAnywhere.widget.update', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget')
+    .directive('inputIpAddress', [function() {
+
+        return {
+            restrict: 'C',
+            transclude: true,
+            scope: {
+                id: '@',
+                name: '@',
+                formController: '=',
+                value: '=ngModel'
+
+            },
+            templateUrl: 'input-ipaddress.html',
+            link: function($scope, $element, $attrs) {
+                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            }
+        };
+    }]);
 angular.module('ptAnywhere.widget.update')
     .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
                                      // Device is injected in $uiModal's resolve.

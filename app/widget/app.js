@@ -21,4 +21,10 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
         }).when('/s/:id', {
             templateUrl: 'main-widget.html'
         }).otherwise('/');
+    }])
+    .config(['$httpProvider', function($httpProvider) {
+        $httpProvider.interceptors.push('HttpErrorInterceptor');
+    }])
+    .run(['HttpErrorInterceptor', function(interceptor) {
+        interceptor.setRedirectionPath('/not-found');
     }]);
