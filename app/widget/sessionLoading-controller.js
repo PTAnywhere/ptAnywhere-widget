@@ -1,7 +1,7 @@
 angular.module('ptAnywhere.widget')
     .controller('SessionLoadingController', ['$location', '$routeParams', 'HttpApiService', 'NetworkMapData',
-                                             'baseUrl', 'imagesUrl', 'locale',
-                                             function($location, $routeParams, api, mapData, baseUrl, imagesUrl, loc) {
+                                             'imagesUrl', 'locale',
+                                             function($location, $routeParams, api, mapData, imagesUrl, loc) {
         var self = this;
         self.path = imagesUrl;
         self.loading = loc.network.loading;

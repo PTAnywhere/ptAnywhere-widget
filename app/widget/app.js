@@ -1,26 +1,7 @@
 angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
-                                     'ptAnywhere', 'ptAnywhere.locale', 'ptAnywhere.api.http',
-                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create',
-                                     'ptAnywhere.widget.link', 'ptAnywhere.widget.map',
-                                     'ptAnywhere.widget.update'])
-    .config(['$injector', '$provide', function($injector, $provide) {
-        // Let's make sure that the following config sections have the constants available even
-        // when they have not been defined by the user.
-        var defaults = {
-            baseUrl: '',
-            imagesUrl: ''
-        };
-        for (var constantName in defaults) {
-            try {
-                $injector.get(constantName);
-                //constant exists
-            } catch(e) {
-                var valueIfUndefined = defaults[constantName];
-                $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
-                $provide.constant(constantName, valueIfUndefined);  // Set default value
-            }
-        }
-    }])
+                                     'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
+                                     'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
+                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])
     .config(['$routeProvider', 'locale',  function($routeProvider, locale) {
         function createSimpleTemplate(message) {
             return '<div class="row message"><div class="col-md-8 col-md-offset-2 text-center">' +

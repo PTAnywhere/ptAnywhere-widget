@@ -1,1 +1,1 @@
-angular.module('ptAnywhere.widget.update', ['ptAnywhere.locale', 'ptAnywhere.widget']);
+angular.module('ptAnywhere.widget.update', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
