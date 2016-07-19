@@ -18,46 +18,46 @@ var PTANYWHERE_MIN_JS  = 'ptAnywhere.min.js';
 
 
 gulp.task('clean', function (done) {
-   return del([TMP + '**'], done);
+    return del([TMP + '**'], done);
 });
 
 gulp.task('lint', function () {
-   var jshint = plugins.jshint;
-   return gulp.src(SRC)
-            .pipe(jshint())
-            .pipe(jshint.reporter('default'));
+    var jshint = plugins.jshint;
+    return gulp.src(SRC)
+                .pipe(jshint())
+                .pipe(jshint.reporter('default'));
 });
 
 gulp.task('test', function (done) {
-  new Server({
-    configFile: __dirname + '/karma.conf.ci.js'
-  }, function(exitCode) {
-    // http://stackoverflow.com/questions/37551521/why-does-gulp-error-when-passing-the-done-function-to-karmas-server
-    done();
-  }).start();
+    new Server({
+        configFile: __dirname + '/karma.conf.ci.js'
+    }, function(exitCode) {
+        // http://stackoverflow.com/questions/37551521/why-does-gulp-error-when-passing-the-done-function-to-karmas-server
+        done();
+    }).start();
 });
 
 gulp.task('templateCaching', ['clean'], function () {
-  var templateCache = plugins.angularTemplatecache;
-  return gulp.src(TEMPLATES)
-    .pipe(templateCache(TEMPLATE_JS, {module: 'ptAnywhere'}))
-    .pipe(gulp.dest(TMP));
+    var templateCache = plugins.angularTemplatecache;
+    return gulp.src(TEMPLATES)
+                .pipe(templateCache(TEMPLATE_JS, {module: 'ptAnywhere.widget'}))
+                .pipe(gulp.dest(TMP));
 });
 
 gulp.task('concat', ['templateCaching'], function () {
-   return gulp.src([SRC, TMP + TEMPLATE_JS])
-      .pipe(plugins.concat(PTANYWHERE_JS))
-      .pipe(gulp.dest(DIST));
+    return gulp.src([SRC, TMP + TEMPLATE_JS])
+                .pipe(plugins.concat(PTANYWHERE_JS))
+                .pipe(gulp.dest(DIST));
 });
 
 // WARNING: It does the concat in alphabetical order.
 // Therefore, if a file named before "app" exists (the module definition is in app.js),
 // it will crash because the module would have not be defined by then.
 gulp.task('minimize', ['concat'], function () {
-   return gulp.src(DIST + PTANYWHERE_JS)
-      .pipe(plugins.uglify())
-      .pipe(plugins.rename(PTANYWHERE_MIN_JS))
-      .pipe(gulp.dest(DIST));
+    return gulp.src(DIST + PTANYWHERE_JS)
+                .pipe(plugins.uglify())
+                .pipe(plugins.rename(PTANYWHERE_MIN_JS))
+                .pipe(gulp.dest(DIST));
 });
 
 // Minimized file should be available in the dist folder.
@@ -103,7 +103,7 @@ gulp.task('extract_dependencies', ['clean'], function () {
 
 // The watch task (to automatically rebuild when the source code changes)
 gulp.task('watch', function () {
-  gulp.watch([SRC], ['lint', 'bundle']);
+    gulp.watch([SRC], ['lint', 'bundle']);
 });
 
 // The default task (called when you run `gulp`)
