@@ -9,7 +9,7 @@ angular.module('ptAnywhere.widget')
             $location.path('/loading/' + $routeParams.id);
         } else {
             self.openConsole = function(consoleEndpoint) {
-                var endpoint = 'console?endpoint=' + consoleEndpoint;
+                var endpoint = consoleEndpoint;
                 modalInstance = $uibModal.open({
                     templateUrl: 'cmd-dialog.html',
                     controller: 'CommandLineController',

@@ -1,29 +1,43 @@
 
+/*
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}*/
+
+.commandline {
+    font: 10pt monospace, Helvetica, Arial;
+    height: 100%;
+    overflow: scroll;
 }
 
-.commandLine {
-  font: 10pt monospace, Helvetica, Arial;
+.commandline .prompt {
+    padding: 0;
+    border: none;
+    background: none;
 }
 
-.messages {
-  margin: 0;
-  padding: 0;
-  white-space: pre;
+.commandline input {
+    border: none;
+    outline: none;
+}
+
+.messages .line {
+    margin: 0;
+    padding: 0;
+    white-space: pre;
 }
 
 .interactive {
-  width: 100%;
+    width: 100%;
 }
 
-.current {
-  min-width: 100px;
-  height: 10pt;
+/*.current {
+    min-width: 100px;
+    height: 10pt;
 }
 
 .current:focus, .current:hover {
     outline: 0;
-}
+}*/

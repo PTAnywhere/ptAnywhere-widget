@@ -4,21 +4,6 @@
  * @link http://pt-anywhere.kmi.open.ac.uk
  */
 angular.module('ptAnywhere', []);
-//angular.module('ptAnywhere.api', ['ptAnywhere.api.http', 'ptAnywhere.api.websocket']);
-
-angular.module('ptAnywhere.api.http', ['ptAnywhere'])
-    .config(['$injector', '$provide', function($injector, $provide) {
-        var $log = console; // FIXME Apparently $log injection does not work in my tests.
-        var constantName = 'url';
-        var valueIfUndefined = '';
-        try {
-            $injector.get(constantName);
-            //constant exists
-        } catch(e) {
-            $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
-            $provide.constant(constantName, valueIfUndefined);  // Set default value
-        }
-    }]);
 angular.module('ptAnywhere.locale', [])
     .config(['$injector', '$provide', function($injector, $provide) {
         $log = console;  // FIXME Apparently $log injection does not work in my tests.
@@ -208,7 +193,7 @@ angular.module('ptAnywhere.widget')
             $location.path('/loading/' + $routeParams.id);
         } else {
             self.openConsole = function(consoleEndpoint) {
-                var endpoint = 'console?endpoint=' + consoleEndpoint;
+                var endpoint = consoleEndpoint;
                 modalInstance = $uibModal.open({
                     templateUrl: 'cmd-dialog.html',
                     controller: 'CommandLineController',
@@ -313,6 +298,21 @@ angular.module('ptAnywhere.widget')
                                 });
                       });
             };
+        }
+    }]);
+//angular.module('ptAnywhere.api', ['ptAnywhere.api.http', 'ptAnywhere.api.websocket']);
+
+angular.module('ptAnywhere.api.http', [])
+    .config(['$injector', '$provide', function($injector, $provide) {
+        var $log = console; // FIXME Apparently $log injection does not work in my tests.
+        var constantName = 'url';
+        var valueIfUndefined = '';
+        try {
+            $injector.get(constantName);
+            //constant exists
+        } catch(e) {
+            $log.log('Setting default value for non existing "' + constantName + '" constant: "' + valueIfUndefined + '"');
+            $provide.constant(constantName, valueIfUndefined);  // Set default value
         }
     }]);
 angular.module('ptAnywhere.api.http')
@@ -478,6 +478,122 @@ angular.module('ptAnywhere.api.http')
             }
         };
     }]);
+angular.module('ptAnywhere.api.websocket', ['ngWebSocket']);
+angular.module('ptAnywhere.api.websocket')
+    .factory('WebsocketApiService', ['$log', '$websocket', function($log, $websocket) {
+        var ws;
+        var callbacks = {};
+
+        function listenWebsocket(websocket) {
+
+            websocket.onOpen(function() {
+                $log.debug('WebSocket connection opened.');
+                callbacks.connected();
+            });
+
+            websocket.onMessage(function(event) {
+                var msg = JSON.parse(event.data);
+                if (msg.hasOwnProperty('prompt')) {  // At the beginning of the session
+                    callbacks.output(msg.prompt);
+                } else if (msg.hasOwnProperty('out')) {
+                    callbacks.output(msg.out);
+                } else if (msg.hasOwnProperty('history')) {
+                    callbacks.history(msg.history);
+                }
+            });
+
+            websocket.onError(function(event) {
+              $log.error('WebSocket error:');
+              $log.error(event);
+              callbacks.warning('Websocket error.');
+            });
+
+            websocket.onClose(function(event) {
+              $log.warn('WebSocket connection closed, Code: ' + event.code);
+              if (event.reason !== '') {
+                $log.warn('\tReason: ' + event.reason);
+              }
+              callbacks.warning('Connection closed. ' + event.reason);
+            });
+        }
+
+        return {
+            /**
+             *  Sets callback.
+             *  @param {connectionCallback} connectedCallback - Function to be called after
+             *         a successful websocket connection.
+             *  @return The service modified.
+             */
+            onConnect: function(connectedCallback) {
+                callbacks.connected = connectedCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {outputCallback} outputCallback - Function to be called on message
+             *         reception.
+             *  @return The service modified.
+             */
+            onOutput: function(outputCallback) {
+                callbacks.output = outputCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {replaceCommandCallback} replaceCommandCallback - Function to be
+             *         called when the current command needs to be replaced.
+             *  @return The service modified.
+             */
+            onCommandReplace: function(replaceCommandCallback) {
+                callbacks.replace = replaceCommandCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {historyCallback} historyCallback - Function to be called when a command
+             *         history list is get.
+             *  @return The service modified.
+             */
+            onHistory: function(historyCallback) {
+                callbacks.history = historyCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {historyCallback} historyCallback - Function to be called when a command
+             *         history list is get.
+             *  @return The service modified.
+             */
+            onWarning: function(warningCallback) {
+                callbacks.warning = warningCallback;
+                return this;
+            },
+            /**
+             *  Connects to websocket endpoint.
+             *  @param {string} websourlcketURL - URL of the websocket for the PTAnywhere command line.
+             */
+            start: function(url) {
+                ws = $websocket(url);
+                listenWebsocket(ws);
+            },
+            /**
+             *  Disconnects from websocket endpoint.
+             */
+            stop: function() {
+                ws.close();
+            },
+            /**
+             *  Executes command in the console.
+             *  @param {string} command - Command to be executed in the command line.
+             */
+            execute: function(command) {
+                ws.send(command);
+            },
+            getHistory: function() {
+                ws.send('/getHistory');
+            }
+        };
+    }]);
 angular.module('ptAnywhere.widget.configuration', [])
     .config(['$injector', '$provide', function($injector, $provide) {
         // Let's make sure that the following config sections have the constants available even
@@ -496,14 +612,230 @@ angular.module('ptAnywhere.widget.configuration', [])
             }
         }
     }]);
-angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale']);
+angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.websocket']);
 angular.module('ptAnywhere.widget.console')
-    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'endpoint',
-                                          function($scope, $uibModalInstance, locale, endpoint) {
+    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'WebsocketApiService', 'HistoryService', 'endpoint',
+                                          function($scope, $uibModalInstance, locale, wsApi, history, endpoint) {
         $scope.title = locale.commandLineDialog.title;
-        $scope.endpoint = endpoint;
+        $scope.disabled = true;
+        $scope.output = [''];
+        $scope.lastLine = {
+            prompt: '',
+            command: 'ping'
+        };
+        $scope.inputCached = false;  // Is the input being cached because history commands are being shown?
+
         $scope.close = function () {
             $uibModalInstance.dismiss('cancel');
+        };
+
+        $scope.send = function (command) {
+            wsApi.execute(command);
+            $scope.lastLine.command = '';
+            // TODO cmd.clearCached();
+            if(!$scope.$$phase) {
+                $scope.$apply();
+            }
+        };
+
+        $scope.onPreviousCommand = function () {
+            /*if (!cmd.isCaching() || cmd.isShowingCached())
+                cmd.updateCached();
+            ptAnywhere.websocket.previous();*/
+            console.log('Previous');
+        };
+
+        $scope.onNextCommand = function () {
+            /*ptAnywhere.websocket.next();*/
+            console.log('Next');
+        };
+
+        wsApi.onConnect(function() {
+                    $scope.disabled = false;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                })
+                .onOutput(function(message) {
+                    console.log('OUTPUT', message);
+                    // Not sure that we will ever get more than a line, but just in case.
+                    var lines = message.split('\n');
+                    if (lines.length>1) {
+                        for (var i=0; i<lines.length-1; i++) { // Unnecessary?
+                            if (i === 0) {
+                                var lastLine = $scope.lastLine.prompt;
+                                if (lastLine.trim() !== '--More--' && lastLine !== '')
+                                    // Write on top of the previous line
+                                    //$scope.output[$scope.output.length-1] += lastLine;
+                                    $scope.output.push(lastLine);
+                                $scope.lastLine.prompt = '';
+                            }
+                            $scope.output.push(lines[i]);
+                        }
+                        console.log($scope.output);
+                    }
+                    $scope.lastLine.prompt += lines[lines.length-1];
+                    //TODO scrollToBottom();
+                    //TODO $('.' + html.cCurrent, cmd.selector).focus();
+
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                })
+                .onCommandReplace(function(command) {
+                    console.log('Replace', command);
+                    var showCurrentIfNull = false;
+                    if (command !== null) {
+                        $scope.lastLine.command = command;
+                        $scope.inputCached = false;
+                        if(!$scope.$$phase) {
+                            $scope.$apply();
+                        }
+                    }
+                })
+                .onHistory(function(historicalCommands) {
+                    console.log(historicalCommands);
+                })
+                .onWarning(function(message) {
+                    $scope.disabled = true;
+                    $scope.lastLine.prompt = null;  // Hide div which handles user input
+                    $scope.output = [ message ];
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                });
+        wsApi.start(endpoint);
+
+        /* if (typeof showCurrentIfNull!=='undefined' && showCurrentIfNull && this.isCaching()) {
+            $('.' + html.cCurrent, this.selector).text(this.getCached());
+            $scope.inputCached = true;
+        } */
+
+        $scope.$on('$destroy', function() {
+            wsApi.stop();
+        });
+    }]);
+angular.module('ptAnywhere.widget.console')
+    .directive('commandline', ['$log', function($log) {
+
+        function strEndsWith(str, suffix) {
+            return str.match(suffix + '$')==suffix;
+        }
+
+        function scrollToBottom() {
+            if (!strEndsWith(window.location.href, '#' + html.nBottom)) {
+                document.location.replace(window.location.href + '#' + html.nBottom);
+            } else {
+                document.location.replace(window.location.href);
+            }
+            // document.location.replace('#bottom'); // Only works if base property is unset.
+            // Another alternative registering "redirection" in the browser history.
+            // window.location.href = '#bottom';
+        }
+
+        // Fix for Chrome and Safari where e.key is undefined
+        function fix(e) {
+            if (typeof e.key === 'undefined') {
+                switch(keyCode) {
+                    case 9: e.key = 'Tab'; break;
+                    case 13: e.key = 'Enter'; break;
+                    case 38: e.key = 'ArrowUp'; break;
+                    case 40: e.key = 'ArrowDown'; break;
+                    default: $log.error('The key could not be '); break;
+                }
+            }
+        }
+
+        function executeCommand($scope, commandToExecute) {
+            $scope.sendCommand({command: commandToExecute});
+            $scope.input.command = '';
+        }
+
+        return {
+            restrict: 'C',
+            scope: {
+                disabled: '=',
+                output: '=',
+                input: '=',
+                sendCommand: '&',
+                onPrevious: '&',
+                onNext: '&'
+            },
+            templateUrl: 'commandline.html',
+            link: function($scope, $element, $attrs) {
+                var interactiveEl = $('.interactive', $element);
+                var currentEl = $('input', interactiveEl);
+
+                interactiveEl.keydown(function(e) {
+                    fix(e);
+                    if (e.key === 'Enter' || e.key === 'Tab') {  // or if (e.keyCode == 13 || e.keyCode == 9)
+                        var commandPressed =  $scope.input.command;  // It does not have '\n' or '\t' at this stage
+                        if (e.key === 'Tab') {
+                            e.preventDefault();  // Do not tab, stay in this field.
+                            commandPressed += '\t';
+                        }
+                        $scope.sendCommand({command: commandPressed});
+                    }
+                });
+
+                interactiveEl.keyup(function(e) {
+                    fix(e);
+                    if (e.key === 'ArrowUp') {
+                        $scope.onPrevious();
+                    } else if (e.key === 'ArrowDown') {
+                        $scope.onNext();
+                    } else {
+                        // In PT, when '?' is pressed, the command is send as it is.
+                        var lastChar = $scope.input.command.slice(-1);
+                        if (lastChar === '?') {  // It has '?'
+                            $scope.sendCommand({command: $scope.input.command});
+                        }
+                    }
+                });
+
+                $scope.focusOnElement = function() {
+                    currentEl.focus();
+                };
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget.console')
+    .factory('HistoryService', [function() {
+        var commands = null;
+        var currentIndex = 0;  // Iterator from 0 to length+1
+        // In last position you can already access previous.
+
+        return {
+            needsToBeUpdated: function() {
+                return commands === null;
+            },
+            markToUpdate: function() {
+                commands = null;
+            },
+            update: function(newCommandHistory, callback) {
+              commands = newCommandHistory;
+              // Current is outside the array limits at the beginning
+              currentIndex = commands.length;
+              callback(this.getPreviousCommand());
+            },
+            getPreviousCommand: function() {
+                if (this.needsToBeUpdated()) return null;
+                // No previous (already in the first position or empty array)
+                if (currentIndex === 0 || commands.length === 0) return null;
+                return commands[--currentIndex];
+            },
+            getNextCommand: function() {
+                if (this.needsToBeUpdated()) return null;
+                // if currentIndex is in length-1, there is no 'next command'.
+                if (currentIndex < commands.length)
+                    // current can still be moved to last position if === length - 1
+                    currentIndex++;
+                if (currentIndex === commands.length) return null;
+                return commands[currentIndex];
+            },
+            _moveIteratorToTheBeginning: function() { // Function for tests
+                currentIndex = 0;
+            }
         };
     }]);
 angular.module('ptAnywhere.widget.create', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http',
@@ -1187,7 +1519,8 @@ angular.module('ptAnywhere.widget.update')
 
         self._load();
     }]);
-angular.module('ptAnywhere').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header" style="height: 10%;">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ title }}\n    </h4>\n</div>\n<div class="modal-body" style="height: 89%;">\n    <div class="iframeWrapper">\n        <iframe class="terminal" src="{{ endpoint }}"></iframe>\n    </div>\n</div>');
+angular.module('ptAnywhere.widget').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header" style="height: 10%;">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ title }}\n    </h4>\n</div>\n<div class="modal-body" style="height: 89%;">\n    <div class="commandline" disabled="disabled" output="output" input="lastLine"\n         send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>\n    <!--<div class="iframeWrapper">\n        <iframe class="terminal" src="{{ endpoint }}"></iframe>\n    </div>-->\n</div>');
+$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<!--<div class="interactive" ng-show="prompt" ng-click="focusOnElement()">\n    <span class="prompt" ng-bind="input.prompt">{{ prompt }}</span><span>&nbsp;</span>\n    <span class="current" contentEditable="true" ng-disabled="disabled" ng-bind="input.command"></span>\n</div>-->\n<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">\n    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />\n</div>\n<a name="bottom"></a>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
 $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div class="modal-header">\n        <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n        <h4 class="modal-title" id="{{ modal.id }}Label">{{ modal.title }}</h4>\n    </div>\n    <div class="modal-body">\n        <div ng-include="modal.bodyTemplate"></div>\n        <p ng-if="submitError !== null" class="clearfix bg-danger">{{ submitError }}</p>\n    </div>\n    <div class="modal-footer">\n        <button ng-click="close()" type="button" class="btn btn-default btn-lg" data-dismiss="modal">Close</button>\n        <button ng-show="modal.hasSubmit" ng-disabled="dialogForm.$invalid" ng-click="submit()" type="button" class="btn btn-primary btn-lg">Submit</button>\n    </div>\n</form>');
 $templateCache.put('input-ipaddress.html','<div class="clearfix form-group has-feedback" ng-class="{\'has-error\': formController.$invalid}">\n    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>\n    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"\n           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >\n    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>\n    <span id="{{ id }}-error" class="sr-only">(error)</span>\n</div>');

@@ -1,1 +1,1 @@
-angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale']);
+angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.websocket']);
