@@ -1,6 +1,8 @@
 angular.module('ptAnywhere.widget.console')
-    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'WebsocketApiService', 'HistoryService', 'endpoint',
-                                          function($scope, $uibModalInstance, locale, wsApi, history, endpoint) {
+    .controller('CommandLineController', ['$log', '$scope', '$location', '$uibModalInstance', 'locale',
+                                          'WebsocketApiService', 'HistoryService', 'redirectionPath', 'endpoint',
+                                          function($log, $scope, $location, $uibModalInstance, locale, wsApi, history,
+                                                    redirectionPath, endpoint) {
         $scope.title = locale.commandLineDialog.title;
         $scope.disabled = true;
         $scope.output = [];
@@ -8,7 +10,28 @@ angular.module('ptAnywhere.widget.console')
             prompt: '',
             command: ''
         };
-        $scope.inputCached = false;  // Is the input being cached because history commands are being shown?
+        $scope.cachedCommand = null;  // The input will be cached when history commands are being shown.
+        $scope.showingCached = false;  // Is the cached input being shown?
+
+        history.markToUpdate(); // To avoid using the history of a previously opened modal
+
+
+        $scope.isShowingCached = function() {
+            return $scope.showingCached;
+        };
+
+        $scope.clearCached = function() {
+            $scope.cachedCommand = null;
+            $scope.showingCached = false;
+        };
+
+        $scope.isCaching = function() {
+            return $scope.cachedCommand !== null;
+        };
+
+        $scope.updateCached = function() {
+            $scope.cachedCommand = $scope.lastLine.command;
+        };
 
         $scope.close = function () {
             $uibModalInstance.dismiss('cancel');
@@ -17,22 +40,48 @@ angular.module('ptAnywhere.widget.console')
         $scope.send = function (command) {
             wsApi.execute(command);
             $scope.lastLine.command = '';
-            // TODO cmd.clearCached();
+            $scope.clearCached();
+            history.markToUpdate();
             if(!$scope.$$phase) {
                 $scope.$apply();
             }
         };
 
         $scope.onPreviousCommand = function () {
-            /*if (!cmd.isCaching() || cmd.isShowingCached())
-                cmd.updateCached();
-            ptAnywhere.websocket.previous();*/
-            console.log('Previous');
+            if (history.needsToBeUpdated()) {
+                wsApi.getHistory();
+            } else {
+                if (!$scope.isCaching() || $scope.isShowingCached())
+                    $scope.updateCached();
+
+                var previous = history.getPreviousCommand();
+                if (previous !== null) {
+                    $scope.lastLine.command = previous;
+                    $scope.showingCached = false;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                }
+            }
         };
 
+        // History is not updated if we are trying to get the "next" of a command which is not part of the history.
         $scope.onNextCommand = function () {
-            /*ptAnywhere.websocket.next();*/
-            console.log('Next');
+            if (!history.needsToBeUpdated()) {
+                var next = history.getNextCommand();
+                if (next !== null) {
+                    $scope.lastLine.command = next;
+                    $scope.showingCached = false;
+                } else {
+                    if ($scope.isCaching()) {
+                        $scope.lastLine.command = $scope.cachedCommand;
+                        $scope.showingCached = true;
+                    }
+                }
+                if(!$scope.$$phase) {
+                    $scope.$apply();
+                }
+            }
         };
 
         wsApi.onConnect(function() {
@@ -57,43 +106,47 @@ angular.module('ptAnywhere.widget.console')
                             }
                             $scope.output.push(lines[i]);
                         }
-                        console.log($scope.output);
                     }
                     $scope.lastLine.prompt += lines[lines.length-1];
-                    //TODO $('.' + html.cCurrent, cmd.selector).focus();
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
                 })
                 .onCommandReplace(function(command) {
-                    console.log('Replace', command);
                     var showCurrentIfNull = false;
                     if (command !== null) {
                         $scope.lastLine.command = command;
-                        $scope.inputCached = false;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
                     }
                 })
                 .onHistory(function(historicalCommands) {
-                    console.log(historicalCommands);
+                    history.update(historicalCommands, function(onPreviousCommand) {
+                        $scope.lastLine.command = onPreviousCommand;
+                        if(!$scope.$$phase) {
+                            $scope.$apply();
+                        }
+                    });
                 })
-                .onWarning(function(message) {
+                .onError(function(event) {
+                    $log.error('WebSocket error', event);
+
                     $scope.disabled = true;
                     $scope.lastLine.prompt = null;  // Hide div which handles user input
-                    $scope.output = [ message ];
+                    $scope.output = ['WebSocket error'];
+
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
+                })
+                .onDisconnect(function(event) {
+                    $log.warn('WebSocket connection closed.', event);
+                    $location.path(redirectionPath);
+                    $uibModalInstance.dismiss('websocket closed');
                 });
         wsApi.start(endpoint);
-
-        /* if (typeof showCurrentIfNull!=='undefined' && showCurrentIfNull && this.isCaching()) {
-            $('.' + html.cCurrent, this.selector).text(this.getCached());
-            $scope.inputCached = true;
-        } */
 
         $scope.$on('$destroy', function() {
             wsApi.stop();

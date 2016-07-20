@@ -1,14 +1,19 @@
 angular.module('ptAnywhere.api.websocket')
-    .factory('WebsocketApiService', ['$log', '$websocket', function($log, $websocket) {
+    .factory('WebsocketApiService', ['$websocket', function($websocket) {
+
         var ws;
-        var callbacks = {};
+        var fn = function() {};
+        var callbacks = {
+            connected: fn,
+            disconnected: fn,
+            error: fn,
+            output: fn
+        };
 
         function listenWebsocket(websocket) {
-
-            websocket.onOpen(function() {
-                callbacks.connected();
-            });
-
+            websocket.onOpen(callbacks.connected);
+            websocket.onClose(callbacks.disconnected);
+            websocket.onError(callbacks.error);
             websocket.onMessage(function(event) {
                 // FIXME The following guard only exists because of the associated unit test.
                 if (typeof event === 'object' && 'data' in event) {
@@ -22,20 +27,6 @@ angular.module('ptAnywhere.api.websocket')
                     }
                 }
             });
-
-            websocket.onError(function(event) {
-              $log.error('WebSocket error:');
-              $log.error(event);
-              callbacks.warning('Websocket error.');
-            });
-
-            websocket.onClose(function(event) {
-              $log.warn('WebSocket connection closed, Code: ' + event.code);
-              if (event.reason !== '') {
-                $log.warn('\tReason: ' + event.reason);
-              }
-              callbacks.warning('Connection closed. ' + event.reason);
-            });
         }
 
         return {
@@ -47,6 +38,16 @@ angular.module('ptAnywhere.api.websocket')
              */
             onConnect: function(connectedCallback) {
                 callbacks.connected = connectedCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {disconnectionCallback} disconnectionCallback - Function to be called after
+             *      the websocket connection.
+             *  @return The service modified.
+             */
+            onDisconnect: function(disconnectionCallback) {
+                callbacks.disconnected = disconnectionCallback;
                 return this;
             },
             /**
@@ -81,12 +82,11 @@ angular.module('ptAnywhere.api.websocket')
             },
             /**
              *  Sets callback.
-             *  @param {historyCallback} historyCallback - Function to be called when a command
-             *         history list is get.
+             *  @param {errorCallback} errorCallback - Function to be called when an error is get.
              *  @return The service modified.
              */
-            onWarning: function(warningCallback) {
-                callbacks.warning = warningCallback;
+            onError: function(errorCallback) {
+                callbacks.error = errorCallback;
                 return this;
             },
             /**
@@ -110,6 +110,9 @@ angular.module('ptAnywhere.api.websocket')
             execute: function(command) {
                 ws.send(command);
             },
+            /**
+             *  Sends a request to update the command history.
+             */
             getHistory: function() {
                 ws.send('/getHistory');
             }

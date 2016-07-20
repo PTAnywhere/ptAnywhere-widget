@@ -4,10 +4,6 @@
         <div ng-show="!line">&nbsp;</div>
     </div>
 </div>
-<!--<div class="interactive" ng-show="prompt" ng-click="focusOnElement()">
-    <span class="prompt" ng-bind="input.prompt">{{ prompt }}</span><span>&nbsp;</span>
-    <span class="current" contentEditable="true" ng-disabled="disabled" ng-bind="input.command"></span>
-</div>-->
 <div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">
     <span class="input-group-addon prompt" ng-bind="input.prompt"></span>
     <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />

@@ -1,11 +1,4 @@
 
-/*
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}*/
-
 .commandline {
     font: 10pt monospace, Helvetica, Arial;
     height: 100%;
@@ -22,6 +15,11 @@
     outline: none;
 }
 
+.commandline .form-control {
+    box-shadow: none;
+    -webkit-box-shadow: none;
+}
+
 .messages .line {
     margin: 0;
     padding: 0;
@@ -31,12 +29,3 @@
 .interactive {
     width: 100%;
 }
-
-/*.current {
-    min-width: 100px;
-    height: 10pt;
-}
-
-.current:focus, .current:hover {
-    outline: 0;
-}*/

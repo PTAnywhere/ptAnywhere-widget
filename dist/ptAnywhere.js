@@ -122,7 +122,8 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directive
                                      'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
                                      'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
                                      'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])
-    .config(['$routeProvider', 'locale',  function($routeProvider, locale) {
+    .constant('redirectionPath', '/not-found')
+    .config(['$routeProvider', 'redirectionPath', 'locale',  function($routeProvider, redirectionPath, locale) {
         function createSimpleTemplate(message) {
             return '<div class="row message"><div class="col-md-8 col-md-offset-2 text-center">' +
                    '<h1>' + message.title + '</h1>' + (('content' in message)? message.content: '') + '</div></div>';
@@ -134,7 +135,7 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directive
             template: createSimpleTemplate(locale.session.unavailable)
         }).when('/session-error', {
             template: createSimpleTemplate(locale.session.genericError)
-        }).when('/not-found', {
+        }).when(redirectionPath, {
             template: createSimpleTemplate(locale.session.notFound)
         }).when('/loading/:id', {
             templateUrl: 'loading.html'
@@ -145,8 +146,8 @@ angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directive
     .config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('HttpErrorInterceptor');
     }])
-    .run(['HttpErrorInterceptor', function(interceptor) {
-        interceptor.setRedirectionPath('/not-found');
+    .run(['HttpErrorInterceptor', 'redirectionPath', function(interceptor, redirectionPath) {
+        interceptor.setRedirectionPath(redirectionPath);
     }]);
 angular.module('ptAnywhere.widget')
     .controller('SessionCreatorController', ['$location', 'HttpApiService', 'fileToOpen',
@@ -480,16 +481,21 @@ angular.module('ptAnywhere.api.http')
     }]);
 angular.module('ptAnywhere.api.websocket', ['ngWebSocket']);
 angular.module('ptAnywhere.api.websocket')
-    .factory('WebsocketApiService', ['$log', '$websocket', function($log, $websocket) {
+    .factory('WebsocketApiService', ['$websocket', function($websocket) {
+
         var ws;
-        var callbacks = {};
+        var fn = function() {};
+        var callbacks = {
+            connected: fn,
+            disconnected: fn,
+            error: fn,
+            output: fn
+        };
 
         function listenWebsocket(websocket) {
-
-            websocket.onOpen(function() {
-                callbacks.connected();
-            });
-
+            websocket.onOpen(callbacks.connected);
+            websocket.onClose(callbacks.disconnected);
+            websocket.onError(callbacks.error);
             websocket.onMessage(function(event) {
                 // FIXME The following guard only exists because of the associated unit test.
                 if (typeof event === 'object' && 'data' in event) {
@@ -503,20 +509,6 @@ angular.module('ptAnywhere.api.websocket')
                     }
                 }
             });
-
-            websocket.onError(function(event) {
-              $log.error('WebSocket error:');
-              $log.error(event);
-              callbacks.warning('Websocket error.');
-            });
-
-            websocket.onClose(function(event) {
-              $log.warn('WebSocket connection closed, Code: ' + event.code);
-              if (event.reason !== '') {
-                $log.warn('\tReason: ' + event.reason);
-              }
-              callbacks.warning('Connection closed. ' + event.reason);
-            });
         }
 
         return {
@@ -528,6 +520,16 @@ angular.module('ptAnywhere.api.websocket')
              */
             onConnect: function(connectedCallback) {
                 callbacks.connected = connectedCallback;
+                return this;
+            },
+            /**
+             *  Sets callback.
+             *  @param {disconnectionCallback} disconnectionCallback - Function to be called after
+             *      the websocket connection.
+             *  @return The service modified.
+             */
+            onDisconnect: function(disconnectionCallback) {
+                callbacks.disconnected = disconnectionCallback;
                 return this;
             },
             /**
@@ -562,12 +564,11 @@ angular.module('ptAnywhere.api.websocket')
             },
             /**
              *  Sets callback.
-             *  @param {historyCallback} historyCallback - Function to be called when a command
-             *         history list is get.
+             *  @param {errorCallback} errorCallback - Function to be called when an error is get.
              *  @return The service modified.
              */
-            onWarning: function(warningCallback) {
-                callbacks.warning = warningCallback;
+            onError: function(errorCallback) {
+                callbacks.error = errorCallback;
                 return this;
             },
             /**
@@ -591,6 +592,9 @@ angular.module('ptAnywhere.api.websocket')
             execute: function(command) {
                 ws.send(command);
             },
+            /**
+             *  Sends a request to update the command history.
+             */
             getHistory: function() {
                 ws.send('/getHistory');
             }
@@ -616,8 +620,10 @@ angular.module('ptAnywhere.widget.configuration', [])
     }]);
 angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.websocket']);
 angular.module('ptAnywhere.widget.console')
-    .controller('CommandLineController', ['$scope', '$uibModalInstance', 'locale', 'WebsocketApiService', 'HistoryService', 'endpoint',
-                                          function($scope, $uibModalInstance, locale, wsApi, history, endpoint) {
+    .controller('CommandLineController', ['$log', '$scope', '$location', '$uibModalInstance', 'locale',
+                                          'WebsocketApiService', 'HistoryService', 'redirectionPath', 'endpoint',
+                                          function($log, $scope, $location, $uibModalInstance, locale, wsApi, history,
+                                                    redirectionPath, endpoint) {
         $scope.title = locale.commandLineDialog.title;
         $scope.disabled = true;
         $scope.output = [];
@@ -625,7 +631,28 @@ angular.module('ptAnywhere.widget.console')
             prompt: '',
             command: ''
         };
-        $scope.inputCached = false;  // Is the input being cached because history commands are being shown?
+        $scope.cachedCommand = null;  // The input will be cached when history commands are being shown.
+        $scope.showingCached = false;  // Is the cached input being shown?
+
+        history.markToUpdate(); // To avoid using the history of a previously opened modal
+
+
+        $scope.isShowingCached = function() {
+            return $scope.showingCached;
+        };
+
+        $scope.clearCached = function() {
+            $scope.cachedCommand = null;
+            $scope.showingCached = false;
+        };
+
+        $scope.isCaching = function() {
+            return $scope.cachedCommand !== null;
+        };
+
+        $scope.updateCached = function() {
+            $scope.cachedCommand = $scope.lastLine.command;
+        };
 
         $scope.close = function () {
             $uibModalInstance.dismiss('cancel');
@@ -634,22 +661,48 @@ angular.module('ptAnywhere.widget.console')
         $scope.send = function (command) {
             wsApi.execute(command);
             $scope.lastLine.command = '';
-            // TODO cmd.clearCached();
+            $scope.clearCached();
+            history.markToUpdate();
             if(!$scope.$$phase) {
                 $scope.$apply();
             }
         };
 
         $scope.onPreviousCommand = function () {
-            /*if (!cmd.isCaching() || cmd.isShowingCached())
-                cmd.updateCached();
-            ptAnywhere.websocket.previous();*/
-            console.log('Previous');
+            if (history.needsToBeUpdated()) {
+                wsApi.getHistory();
+            } else {
+                if (!$scope.isCaching() || $scope.isShowingCached())
+                    $scope.updateCached();
+
+                var previous = history.getPreviousCommand();
+                if (previous !== null) {
+                    $scope.lastLine.command = previous;
+                    $scope.showingCached = false;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                }
+            }
         };
 
+        // History is not updated if we are trying to get the "next" of a command which is not part of the history.
         $scope.onNextCommand = function () {
-            /*ptAnywhere.websocket.next();*/
-            console.log('Next');
+            if (!history.needsToBeUpdated()) {
+                var next = history.getNextCommand();
+                if (next !== null) {
+                    $scope.lastLine.command = next;
+                    $scope.showingCached = false;
+                } else {
+                    if ($scope.isCaching()) {
+                        $scope.lastLine.command = $scope.cachedCommand;
+                        $scope.showingCached = true;
+                    }
+                }
+                if(!$scope.$$phase) {
+                    $scope.$apply();
+                }
+            }
         };
 
         wsApi.onConnect(function() {
@@ -674,43 +727,47 @@ angular.module('ptAnywhere.widget.console')
                             }
                             $scope.output.push(lines[i]);
                         }
-                        console.log($scope.output);
                     }
                     $scope.lastLine.prompt += lines[lines.length-1];
-                    //TODO $('.' + html.cCurrent, cmd.selector).focus();
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
                 })
                 .onCommandReplace(function(command) {
-                    console.log('Replace', command);
                     var showCurrentIfNull = false;
                     if (command !== null) {
                         $scope.lastLine.command = command;
-                        $scope.inputCached = false;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
                     }
                 })
                 .onHistory(function(historicalCommands) {
-                    console.log(historicalCommands);
+                    history.update(historicalCommands, function(onPreviousCommand) {
+                        $scope.lastLine.command = onPreviousCommand;
+                        if(!$scope.$$phase) {
+                            $scope.$apply();
+                        }
+                    });
                 })
-                .onWarning(function(message) {
+                .onError(function(event) {
+                    $log.error('WebSocket error', event);
+
                     $scope.disabled = true;
                     $scope.lastLine.prompt = null;  // Hide div which handles user input
-                    $scope.output = [ message ];
+                    $scope.output = ['WebSocket error'];
+
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
+                })
+                .onDisconnect(function(event) {
+                    $log.warn('WebSocket connection closed.', event);
+                    $location.path(redirectionPath);
+                    $uibModalInstance.dismiss('websocket closed');
                 });
         wsApi.start(endpoint);
-
-        /* if (typeof showCurrentIfNull!=='undefined' && showCurrentIfNull && this.isCaching()) {
-            $('.' + html.cCurrent, this.selector).text(this.getCached());
-            $scope.inputCached = true;
-        } */
 
         $scope.$on('$destroy', function() {
             wsApi.stop();
@@ -1078,134 +1135,6 @@ angular.module('ptAnywhere.widget.link')
 
         self._load();
     }]);
-angular.module('ptAnywhere.widget.update', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
-angular.module('ptAnywhere.widget')
-    .directive('inputIpAddress', [function() {
-
-        return {
-            restrict: 'C',
-            transclude: true,
-            scope: {
-                id: '@',
-                name: '@',
-                formController: '=',
-                value: '=ngModel'
-
-            },
-            templateUrl: 'input-ipaddress.html',
-            link: function($scope, $element, $attrs) {
-                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-            }
-        };
-    }]);
-angular.module('ptAnywhere.widget.update')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
-                                     // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
-        var self = this;
-        $scope.submitError = null;
-        $scope.interfaces = null;
-        $scope.interface = {
-            selected: null,
-            ipAddr: null,
-            subnet: null
-        };
-
-        $scope.locale = locale;
-        $scope.modal = {
-            id: 'modification-dialog',
-            title: locale.modificationDialog.title,
-            bodyTemplate: 'update-dialog-body.html',
-            hasSubmit: true
-        };
-        $scope.device = {
-            name: deviceToEdit.label,
-            defaultGateway: ('defaultGateway' in deviceToEdit)? deviceToEdit.defaultGateway: null
-        };
-
-        $scope.$watch('interfaces', function(newValue, oldValue) {
-            if (newValue !== null) {
-                $scope.interface.selected = newValue[0];
-            }
-        });
-
-        $scope.$watch('interface.selected', function(newValue, oldValue) {
-            if (newValue && ('portIpAddress' in newValue) && ('portSubnetMask' in newValue)) {
-                $scope.interface.ipAddr = newValue.portIpAddress;
-                $scope.interface.subnet = newValue.portSubnetMask;
-            } else {
-                // Not all the might have ip address and subnet.
-                $scope.interface.ipAddr = null;
-                $scope.interface.subnet = null;
-            }
-        });
-
-        self._load = function() {
-            api.getAllPorts(deviceToEdit)
-                .then(function(ports) {
-                    $scope.interfaces = ports;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
-                }, function(response) {
-                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
-                    $uibModalInstance.dismiss('cancel');
-                });
-        };
-
-        self._haveGlobalSettingsChanged = function() {
-            // TODO use $pristine instead
-            return ($scope.device.name != deviceToEdit.label) ||
-                   (('defaultGateway' in deviceToEdit) &&
-                    ($scope.device.defaultGateway != deviceToEdit.defaultGateway));
-        };
-
-        self._hasInterfaceChanged = function() {
-            // TODO use $pristine instead
-            return ($scope.interface.ipAddr !== null && $scope.interface.subnet !== null) &&
-                   ($scope.interface.ipAddr != $scope.interface.selected.portIpAddress ||
-                    $scope.interface.subnet != $scope.interface.selected.portSubnetMask);
-        };
-
-        $scope.submit = function() {
-            var update;
-            if (self._haveGlobalSettingsChanged()) {
-                update = api.modifyDevice(deviceToEdit, $scope.device.name, $scope.device.defaultGateway)
-                            .then(function(modifiedDevice) {
-                                return modifiedDevice;
-                            }, function(error) {
-                                $scope.submitError = 'Global settings could not be modified.';
-                                return error;
-                            });
-            } else {
-                update = Promise.resolve(null);  // No modification return.
-            }
-            // Sequential order as API cannot cope with simultaneous changes when device name is modified.
-            if (self._hasInterfaceChanged()) {
-                update = update.then(function(modifiedDevice) {
-                                        return api.modifyPort($scope.interface.selected.url,
-                                                              $scope.interface.ipAddr, $scope.interface.subnet)
-                                                  .then(function(port) {
-                                                      return modifiedDevice;
-                                                  }, function(error) {
-                                                      $scope.submitError = 'Interface details could not be modified.';
-                                                      return error;
-                                                  });
-                                    });
-            }
-            update.then(function(modifiedDevice) {
-                $uibModalInstance.close(modifiedDevice);
-            }, function(error) {
-                $log.error('Update(s) could not be performed.', error);
-            });
-        };
-
-        $scope.close = function () {
-            $uibModalInstance.dismiss('cancel');
-        };
-
-        self._load();
-    }]);
 angular.module('ptAnywhere.widget.map',
                 ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http', 'ptAnywhere.widget.configuration']);
 angular.module('ptAnywhere.widget.map')
@@ -1520,8 +1449,136 @@ angular.module('ptAnywhere.widget.map')
             }
         };
     }]);
+angular.module('ptAnywhere.widget.update', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
+angular.module('ptAnywhere.widget')
+    .directive('inputIpAddress', [function() {
+
+        return {
+            restrict: 'C',
+            transclude: true,
+            scope: {
+                id: '@',
+                name: '@',
+                formController: '=',
+                value: '=ngModel'
+
+            },
+            templateUrl: 'input-ipaddress.html',
+            link: function($scope, $element, $attrs) {
+                $scope.ipAddrPattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            }
+        };
+    }]);
+angular.module('ptAnywhere.widget.update')
+    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
+                                     // Device is injected in $uiModal's resolve.
+                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
+        var self = this;
+        $scope.submitError = null;
+        $scope.interfaces = null;
+        $scope.interface = {
+            selected: null,
+            ipAddr: null,
+            subnet: null
+        };
+
+        $scope.locale = locale;
+        $scope.modal = {
+            id: 'modification-dialog',
+            title: locale.modificationDialog.title,
+            bodyTemplate: 'update-dialog-body.html',
+            hasSubmit: true
+        };
+        $scope.device = {
+            name: deviceToEdit.label,
+            defaultGateway: ('defaultGateway' in deviceToEdit)? deviceToEdit.defaultGateway: null
+        };
+
+        $scope.$watch('interfaces', function(newValue, oldValue) {
+            if (newValue !== null) {
+                $scope.interface.selected = newValue[0];
+            }
+        });
+
+        $scope.$watch('interface.selected', function(newValue, oldValue) {
+            if (newValue && ('portIpAddress' in newValue) && ('portSubnetMask' in newValue)) {
+                $scope.interface.ipAddr = newValue.portIpAddress;
+                $scope.interface.subnet = newValue.portSubnetMask;
+            } else {
+                // Not all the might have ip address and subnet.
+                $scope.interface.ipAddr = null;
+                $scope.interface.subnet = null;
+            }
+        });
+
+        self._load = function() {
+            api.getAllPorts(deviceToEdit)
+                .then(function(ports) {
+                    $scope.interfaces = ports;
+                    if(!$scope.$$phase) {
+                        $scope.$apply();
+                    }
+                }, function(response) {
+                    $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
+                    $uibModalInstance.dismiss('cancel');
+                });
+        };
+
+        self._haveGlobalSettingsChanged = function() {
+            // TODO use $pristine instead
+            return ($scope.device.name != deviceToEdit.label) ||
+                   (('defaultGateway' in deviceToEdit) &&
+                    ($scope.device.defaultGateway != deviceToEdit.defaultGateway));
+        };
+
+        self._hasInterfaceChanged = function() {
+            // TODO use $pristine instead
+            return ($scope.interface.ipAddr !== null && $scope.interface.subnet !== null) &&
+                   ($scope.interface.ipAddr != $scope.interface.selected.portIpAddress ||
+                    $scope.interface.subnet != $scope.interface.selected.portSubnetMask);
+        };
+
+        $scope.submit = function() {
+            var update;
+            if (self._haveGlobalSettingsChanged()) {
+                update = api.modifyDevice(deviceToEdit, $scope.device.name, $scope.device.defaultGateway)
+                            .then(function(modifiedDevice) {
+                                return modifiedDevice;
+                            }, function(error) {
+                                $scope.submitError = 'Global settings could not be modified.';
+                                return error;
+                            });
+            } else {
+                update = Promise.resolve(null);  // No modification return.
+            }
+            // Sequential order as API cannot cope with simultaneous changes when device name is modified.
+            if (self._hasInterfaceChanged()) {
+                update = update.then(function(modifiedDevice) {
+                                        return api.modifyPort($scope.interface.selected.url,
+                                                              $scope.interface.ipAddr, $scope.interface.subnet)
+                                                  .then(function(port) {
+                                                      return modifiedDevice;
+                                                  }, function(error) {
+                                                      $scope.submitError = 'Interface details could not be modified.';
+                                                      return error;
+                                                  });
+                                    });
+            }
+            update.then(function(modifiedDevice) {
+                $uibModalInstance.close(modifiedDevice);
+            }, function(error) {
+                $log.error('Update(s) could not be performed.', error);
+            });
+        };
+
+        $scope.close = function () {
+            $uibModalInstance.dismiss('cancel');
+        };
+
+        self._load();
+    }]);
 angular.module('ptAnywhere.widget').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ title }}\n    </h4>\n</div>\n<div class="modal-body">\n    <div scroll-glue>\n        <div class="commandline" disabled="disabled" output="output" input="lastLine"\n             send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>\n    </div>\n</div>');
-$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<!--<div class="interactive" ng-show="prompt" ng-click="focusOnElement()">\n    <span class="prompt" ng-bind="input.prompt">{{ prompt }}</span><span>&nbsp;</span>\n    <span class="current" contentEditable="true" ng-disabled="disabled" ng-bind="input.command"></span>\n</div>-->\n<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">\n    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />\n</div>');
+$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">\n    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />\n</div>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
 $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div class="modal-header">\n        <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n        <h4 class="modal-title" id="{{ modal.id }}Label">{{ modal.title }}</h4>\n    </div>\n    <div class="modal-body">\n        <div ng-include="modal.bodyTemplate"></div>\n        <p ng-if="submitError !== null" class="clearfix bg-danger">{{ submitError }}</p>\n    </div>\n    <div class="modal-footer">\n        <button ng-click="close()" type="button" class="btn btn-default btn-lg" data-dismiss="modal">Close</button>\n        <button ng-show="modal.hasSubmit" ng-disabled="dialogForm.$invalid" ng-click="submit()" type="button" class="btn btn-primary btn-lg">Submit</button>\n    </div>\n</form>');
 $templateCache.put('input-ipaddress.html','<div class="clearfix form-group has-feedback" ng-class="{\'has-error\': formController.$invalid}">\n    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>\n    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"\n           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >\n    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>\n    <span id="{{ id }}-error" class="sr-only">(error)</span>\n</div>');
