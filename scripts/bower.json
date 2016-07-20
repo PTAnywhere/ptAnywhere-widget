@@ -7,7 +7,7 @@
   ],
   "description": "Javascript application with the GUI widgets for PTAnywhere.",
   "main": [
-    "../dist/ptAnywhere.min.js",
+    "../dist/ptAnywhere.js",
     "../dist/css/ptAnywhere.css"
   ],
   "repository": {
