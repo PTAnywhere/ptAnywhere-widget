@@ -1,7 +1,7 @@
 angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directives', // For CMD dialog
                                      'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
                                      'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
-                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])
+                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update', 'ptAnywhere.templates'])
     .constant('redirectionPath', '/not-found')
     .config(['$routeProvider', 'redirectionPath', 'locale',  function($routeProvider, redirectionPath, locale) {
         function createSimpleTemplate(message) {

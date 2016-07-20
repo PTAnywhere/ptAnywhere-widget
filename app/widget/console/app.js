@@ -1,1 +1,2 @@
-angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.websocket']);
+// This submodule can be part of a widget or be used alone in its own webpage (to isolate console functionality).
+angular.module('ptAnywhere.widget.console', ['ptAnywhere.api.websocket', 'ptAnywhere.templates']);

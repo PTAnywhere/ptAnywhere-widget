@@ -1,63 +1,66 @@
 angular.module('ptAnywhere.widget.console')
-    .controller('CommandLineController', ['$log', '$scope', '$location', '$uibModalInstance', 'locale',
-                                          'WebsocketApiService', 'HistoryService', 'redirectionPath', 'endpoint',
-                                          function($log, $scope, $location, $uibModalInstance, locale, wsApi, history,
-                                                    redirectionPath, endpoint) {
-        $scope.title = locale.commandLineDialog.title;
-        $scope.disabled = true;
-        $scope.output = [];
-        $scope.lastLine = {
+    .controller('CommandLineController', ['$log', '$scope', '$injector', 'WebsocketApiService', 'HistoryService',
+                                          function($log, $scope, $injector, wsApi, history) {
+        var self = this;
+
+        // Variables inherited in this controller scope
+        self.onDisconnect = ('onDisconnect' in $scope)? $scope.onDisconnect : null;
+        self.endpoint = ('endpoint' in $scope)? $scope.endpoint : null;
+        if (self.endpoint === null) {
+            self.endpoint = $injector.get('endpoint');
+        }
+        // End: Variables inherited
+
+        self.disabled = true;
+        self.output = [];
+        self.lastLine = {
             prompt: '',
             command: ''
         };
-        $scope.cachedCommand = null;  // The input will be cached when history commands are being shown.
-        $scope.showingCached = false;  // Is the cached input being shown?
+        self.cachedCommand = null;  // The input will be cached when history commands are being shown.
+        self.showingCached = false;  // Is the cached input being shown?
 
         history.markToUpdate(); // To avoid using the history of a previously opened modal
 
 
-        $scope.isShowingCached = function() {
-            return $scope.showingCached;
+        self.isShowingCached = function() {
+            return self.showingCached;
         };
 
-        $scope.clearCached = function() {
-            $scope.cachedCommand = null;
-            $scope.showingCached = false;
+        self.clearCached = function() {
+            self.cachedCommand = null;
+            self.showingCached = false;
         };
 
-        $scope.isCaching = function() {
-            return $scope.cachedCommand !== null;
+        self.isCaching = function() {
+            return self.cachedCommand !== null;
         };
 
-        $scope.updateCached = function() {
-            $scope.cachedCommand = $scope.lastLine.command;
+        self.updateCached = function() {
+            self.cachedCommand = self.lastLine.command;
         };
 
-        $scope.close = function () {
-            $uibModalInstance.dismiss('cancel');
-        };
-
-        $scope.send = function (command) {
+        self.send = function (command) {
             wsApi.execute(command);
-            $scope.lastLine.command = '';
-            $scope.clearCached();
+            self.lastLine.command = '';
+            self.clearCached();
             history.markToUpdate();
             if(!$scope.$$phase) {
                 $scope.$apply();
             }
         };
 
-        $scope.onPreviousCommand = function () {
+        self.onPreviousCommand = function () {
             if (history.needsToBeUpdated()) {
                 wsApi.getHistory();
             } else {
-                if (!$scope.isCaching() || $scope.isShowingCached())
-                    $scope.updateCached();
+                if (!self.isCaching() || self.isShowingCached())
+                    self.updateCached();
 
                 var previous = history.getPreviousCommand();
                 if (previous !== null) {
-                    $scope.lastLine.command = previous;
-                    $scope.showingCached = false;
+                    self.lastLine.command = previous;
+                    self.showingCached = false;
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
@@ -66,16 +69,16 @@ angular.module('ptAnywhere.widget.console')
         };
 
         // History is not updated if we are trying to get the "next" of a command which is not part of the history.
-        $scope.onNextCommand = function () {
+        self.onNextCommand = function () {
             if (!history.needsToBeUpdated()) {
                 var next = history.getNextCommand();
                 if (next !== null) {
-                    $scope.lastLine.command = next;
-                    $scope.showingCached = false;
+                    self.lastLine.command = next;
+                    self.showingCached = false;
                 } else {
-                    if ($scope.isCaching()) {
-                        $scope.lastLine.command = $scope.cachedCommand;
-                        $scope.showingCached = true;
+                    if (self.isCaching()) {
+                        self.lastLine.command = self.cachedCommand;
+                        self.showingCached = true;
                     }
                 }
                 if(!$scope.$$phase) {
@@ -86,7 +89,7 @@ angular.module('ptAnywhere.widget.console')
 
         wsApi.onConnect(function() {
                     $log.debug('WebSocket connection opened.');
-                    $scope.disabled = false;
+                    self.disabled = false;
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
@@ -97,17 +100,17 @@ angular.module('ptAnywhere.widget.console')
                     if (lines.length>1) {
                         for (var i=0; i<lines.length-1; i++) { // Unnecessary?
                             if (i === 0) {
-                                var lastLine = $scope.lastLine.prompt;
+                                var lastLine = self.lastLine.prompt;
                                 if (lastLine.trim() !== '--More--' && lastLine !== '')
                                     // Write on top of the previous line
-                                    //$scope.output[$scope.output.length-1] += lastLine;
-                                    $scope.output.push(lastLine);
-                                $scope.lastLine.prompt = '';
+                                    //self.output[self.output.length-1] += lastLine;
+                                    self.output.push(lastLine);
+                                self.lastLine.prompt = '';
                             }
-                            $scope.output.push(lines[i]);
+                            self.output.push(lines[i]);
                         }
                     }
-                    $scope.lastLine.prompt += lines[lines.length-1];
+                    self.lastLine.prompt += lines[lines.length-1];
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
@@ -116,7 +119,7 @@ angular.module('ptAnywhere.widget.console')
                 .onCommandReplace(function(command) {
                     var showCurrentIfNull = false;
                     if (command !== null) {
-                        $scope.lastLine.command = command;
+                        self.lastLine.command = command;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
@@ -124,7 +127,7 @@ angular.module('ptAnywhere.widget.console')
                 })
                 .onHistory(function(historicalCommands) {
                     history.update(historicalCommands, function(onPreviousCommand) {
-                        $scope.lastLine.command = onPreviousCommand;
+                        self.lastLine.command = onPreviousCommand;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
@@ -133,9 +136,9 @@ angular.module('ptAnywhere.widget.console')
                 .onError(function(event) {
                     $log.error('WebSocket error', event);
 
-                    $scope.disabled = true;
-                    $scope.lastLine.prompt = null;  // Hide div which handles user input
-                    $scope.output = ['WebSocket error'];
+                    self.disabled = true;
+                    self.lastLine.prompt = null;  // Hide div which handles user input
+                    self.output = ['WebSocket error'];
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
@@ -143,10 +146,20 @@ angular.module('ptAnywhere.widget.console')
                 })
                 .onDisconnect(function(event) {
                     $log.warn('WebSocket connection closed.', event);
-                    $location.path(redirectionPath);
-                    $uibModalInstance.dismiss('websocket closed');
+                    if (self.onDisconnect === null) {
+                        self.disabled = true;
+                        self.lastLine.prompt = null;  // Hide div which handles user input
+                        self.output = ['WebSocket closed'];
+
+                        if(!$scope.$$phase) {
+                            $scope.$apply();
+                        }
+                    } else {
+                        self.onDisconnect();
+                    }
                 });
-        wsApi.start(endpoint);
+
+        wsApi.start(self.endpoint);
 
         $scope.$on('$destroy', function() {
             wsApi.stop();

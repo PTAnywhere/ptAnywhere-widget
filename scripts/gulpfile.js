@@ -40,7 +40,7 @@ gulp.task('test', function (done) {
 gulp.task('templateCaching', ['clean'], function () {
     var templateCache = plugins.angularTemplatecache;
     return gulp.src(TEMPLATES)
-                .pipe(templateCache(TEMPLATE_JS, {module: 'ptAnywhere.widget'}))
+                .pipe(templateCache(TEMPLATE_JS, {module: 'ptAnywhere.templates'}))
                 .pipe(gulp.dest(TMP));
 });
 

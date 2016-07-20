@@ -2,12 +2,16 @@
     <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>
     <h4 class="modal-title" id="cmdModal">
         <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>
-        {{ title }}
+        {{ modal.title }}
     </h4>
 </div>
 <div class="modal-body">
     <div scroll-glue>
-        <div class="commandline" disabled="disabled" output="output" input="lastLine"
-             send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>
+        <!-- Uses variables form parent controller: endpoint and onDisconnect-->
+        <div ng-controller="CommandLineController as cmd">
+            <div class="commandline" disabled="cmd.disabled" output="cmd.output" input="cmd.lastLine"
+                    send-command="cmd.send(command)" on-previous="cmd.onPreviousCommand()" on-next="cmd.onNextCommand()">
+            </div>
+        </div>
     </div>
 </div>

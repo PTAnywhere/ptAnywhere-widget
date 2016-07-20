@@ -4,6 +4,7 @@
  * @link http://pt-anywhere.kmi.open.ac.uk
  */
 angular.module('ptAnywhere', []);
+angular.module('ptAnywhere.templates', []);
 angular.module('ptAnywhere.locale', [])
     .config(['$injector', '$provide', function($injector, $provide) {
         $log = console;  // FIXME Apparently $log injection does not work in my tests.
@@ -121,7 +122,7 @@ angular.module('ptAnywhere.locale')
 angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directives', // For CMD dialog
                                      'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
                                      'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
-                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])
+                                     'ptAnywhere.widget.map', 'ptAnywhere.widget.update', 'ptAnywhere.templates'])
     .constant('redirectionPath', '/not-found')
     .config(['$routeProvider', 'redirectionPath', 'locale',  function($routeProvider, redirectionPath, locale) {
         function createSimpleTemplate(message) {
@@ -197,9 +198,21 @@ angular.module('ptAnywhere.widget')
                 var endpoint = consoleEndpoint;
                 modalInstance = $uibModal.open({
                     templateUrl: 'cmd-dialog.html',
-                    controller: 'CommandLineController',
+                    controller: //'CommandLineController'
+                                ['$location', '$scope', '$uibModalInstance', 'locale', 'redirectionPath', 'wsUrl',
+                                    function($location, $scope, $uibModalInstance, locale, redirectionPath, wsUrl) {
+                                        var self = this;
+                                        self.title = locale.commandLineDialog.title;
+                                        // To be used in child controller:
+                                        $scope.onDisconnect = function() {
+                                            $location.path(redirectionPath);
+                                            $uibModalInstance.dismiss('websocket closed');
+                                        };
+                                        $scope.endpoint = wsUrl;
+                                    }],
+                    controllerAs: 'modal',
                     resolve: {
-                        endpoint: function () {
+                        wsUrl: function () {
                             return endpoint;
                         }
                     },
@@ -618,67 +631,71 @@ angular.module('ptAnywhere.widget.configuration', [])
             }
         }
     }]);
-angular.module('ptAnywhere.widget.console', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.websocket']);
+// This submodule can be part of the widget or used alone in its own webpage (to isolate console).
+angular.module('ptAnywhere.widget.console', ['ptAnywhere.api.websocket', 'ptAnywhere.templates']);
 angular.module('ptAnywhere.widget.console')
-    .controller('CommandLineController', ['$log', '$scope', '$location', '$uibModalInstance', 'locale',
-                                          'WebsocketApiService', 'HistoryService', 'redirectionPath', 'endpoint',
-                                          function($log, $scope, $location, $uibModalInstance, locale, wsApi, history,
-                                                    redirectionPath, endpoint) {
-        $scope.title = locale.commandLineDialog.title;
-        $scope.disabled = true;
-        $scope.output = [];
-        $scope.lastLine = {
+    .controller('CommandLineController', ['$log', '$scope', '$injector', 'WebsocketApiService', 'HistoryService',
+                                          function($log, $scope, $injector, wsApi, history) {
+        var self = this;
+
+        // Variables inherited in this controller scope
+        self.onDisconnect = ('onDisconnect' in $scope)? $scope.onDisconnect : null;
+        self.endpoint = ('endpoint' in $scope)? $scope.endpoint : null;
+        if (self.endpoint === null) {
+            self.endpoint = $injector.get('endpoint');
+        }
+        // End: Variables inherited
+
+        self.disabled = true;
+        self.output = [];
+        self.lastLine = {
             prompt: '',
             command: ''
         };
-        $scope.cachedCommand = null;  // The input will be cached when history commands are being shown.
-        $scope.showingCached = false;  // Is the cached input being shown?
+        self.cachedCommand = null;  // The input will be cached when history commands are being shown.
+        self.showingCached = false;  // Is the cached input being shown?
 
         history.markToUpdate(); // To avoid using the history of a previously opened modal
 
 
-        $scope.isShowingCached = function() {
-            return $scope.showingCached;
+        self.isShowingCached = function() {
+            return self.showingCached;
         };
 
-        $scope.clearCached = function() {
-            $scope.cachedCommand = null;
-            $scope.showingCached = false;
+        self.clearCached = function() {
+            self.cachedCommand = null;
+            self.showingCached = false;
         };
 
-        $scope.isCaching = function() {
-            return $scope.cachedCommand !== null;
+        self.isCaching = function() {
+            return self.cachedCommand !== null;
         };
 
-        $scope.updateCached = function() {
-            $scope.cachedCommand = $scope.lastLine.command;
+        self.updateCached = function() {
+            self.cachedCommand = self.lastLine.command;
         };
 
-        $scope.close = function () {
-            $uibModalInstance.dismiss('cancel');
-        };
-
-        $scope.send = function (command) {
+        self.send = function (command) {
             wsApi.execute(command);
-            $scope.lastLine.command = '';
-            $scope.clearCached();
+            self.lastLine.command = '';
+            self.clearCached();
             history.markToUpdate();
             if(!$scope.$$phase) {
                 $scope.$apply();
             }
         };
 
-        $scope.onPreviousCommand = function () {
+        self.onPreviousCommand = function () {
             if (history.needsToBeUpdated()) {
                 wsApi.getHistory();
             } else {
-                if (!$scope.isCaching() || $scope.isShowingCached())
-                    $scope.updateCached();
+                if (!self.isCaching() || self.isShowingCached())
+                    self.updateCached();
 
                 var previous = history.getPreviousCommand();
                 if (previous !== null) {
-                    $scope.lastLine.command = previous;
-                    $scope.showingCached = false;
+                    self.lastLine.command = previous;
+                    self.showingCached = false;
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
@@ -687,16 +704,16 @@ angular.module('ptAnywhere.widget.console')
         };
 
         // History is not updated if we are trying to get the "next" of a command which is not part of the history.
-        $scope.onNextCommand = function () {
+        self.onNextCommand = function () {
             if (!history.needsToBeUpdated()) {
                 var next = history.getNextCommand();
                 if (next !== null) {
-                    $scope.lastLine.command = next;
-                    $scope.showingCached = false;
+                    self.lastLine.command = next;
+                    self.showingCached = false;
                 } else {
-                    if ($scope.isCaching()) {
-                        $scope.lastLine.command = $scope.cachedCommand;
-                        $scope.showingCached = true;
+                    if (self.isCaching()) {
+                        self.lastLine.command = self.cachedCommand;
+                        self.showingCached = true;
                     }
                 }
                 if(!$scope.$$phase) {
@@ -707,7 +724,7 @@ angular.module('ptAnywhere.widget.console')
 
         wsApi.onConnect(function() {
                     $log.debug('WebSocket connection opened.');
-                    $scope.disabled = false;
+                    self.disabled = false;
                     if(!$scope.$$phase) {
                         $scope.$apply();
                     }
@@ -718,17 +735,17 @@ angular.module('ptAnywhere.widget.console')
                     if (lines.length>1) {
                         for (var i=0; i<lines.length-1; i++) { // Unnecessary?
                             if (i === 0) {
-                                var lastLine = $scope.lastLine.prompt;
+                                var lastLine = self.lastLine.prompt;
                                 if (lastLine.trim() !== '--More--' && lastLine !== '')
                                     // Write on top of the previous line
-                                    //$scope.output[$scope.output.length-1] += lastLine;
-                                    $scope.output.push(lastLine);
-                                $scope.lastLine.prompt = '';
+                                    //self.output[self.output.length-1] += lastLine;
+                                    self.output.push(lastLine);
+                                self.lastLine.prompt = '';
                             }
-                            $scope.output.push(lines[i]);
+                            self.output.push(lines[i]);
                         }
                     }
-                    $scope.lastLine.prompt += lines[lines.length-1];
+                    self.lastLine.prompt += lines[lines.length-1];
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
@@ -737,7 +754,7 @@ angular.module('ptAnywhere.widget.console')
                 .onCommandReplace(function(command) {
                     var showCurrentIfNull = false;
                     if (command !== null) {
-                        $scope.lastLine.command = command;
+                        self.lastLine.command = command;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
@@ -745,7 +762,7 @@ angular.module('ptAnywhere.widget.console')
                 })
                 .onHistory(function(historicalCommands) {
                     history.update(historicalCommands, function(onPreviousCommand) {
-                        $scope.lastLine.command = onPreviousCommand;
+                        self.lastLine.command = onPreviousCommand;
                         if(!$scope.$$phase) {
                             $scope.$apply();
                         }
@@ -754,9 +771,9 @@ angular.module('ptAnywhere.widget.console')
                 .onError(function(event) {
                     $log.error('WebSocket error', event);
 
-                    $scope.disabled = true;
-                    $scope.lastLine.prompt = null;  // Hide div which handles user input
-                    $scope.output = ['WebSocket error'];
+                    self.disabled = true;
+                    self.lastLine.prompt = null;  // Hide div which handles user input
+                    self.output = ['WebSocket error'];
 
                     if(!$scope.$$phase) {
                         $scope.$apply();
@@ -764,10 +781,20 @@ angular.module('ptAnywhere.widget.console')
                 })
                 .onDisconnect(function(event) {
                     $log.warn('WebSocket connection closed.', event);
-                    $location.path(redirectionPath);
-                    $uibModalInstance.dismiss('websocket closed');
+                    if (self.onDisconnect === null) {
+                        self.disabled = true;
+                        self.lastLine.prompt = null;  // Hide div which handles user input
+                        self.output = ['WebSocket closed'];
+
+                        if(!$scope.$$phase) {
+                            $scope.$apply();
+                        }
+                    } else {
+                        self.onDisconnect();
+                    }
                 });
-        wsApi.start(endpoint);
+
+        wsApi.start(self.endpoint);
 
         $scope.$on('$destroy', function() {
             wsApi.stop();
@@ -1577,7 +1604,7 @@ angular.module('ptAnywhere.widget.update')
 
         self._load();
     }]);
-angular.module('ptAnywhere.widget').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ title }}\n    </h4>\n</div>\n<div class="modal-body">\n    <div scroll-glue>\n        <div class="commandline" disabled="disabled" output="output" input="lastLine"\n             send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>\n    </div>\n</div>');
+angular.module('ptAnywhere.templates').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ modal.title }}\n    </h4>\n</div>\n<div class="modal-body">\n    <div scroll-glue>\n        <!-- Uses variables form parent controller: endpoint and onDisconnect-->\n        <div ng-controller="CommandLineController as cmd">\n            <div class="commandline" disabled="cmd.disabled" output="cmd.output" input="cmd.lastLine"\n                    send-command="cmd.send(command)" on-previous="cmd.onPreviousCommand()" on-next="cmd.onNextCommand()">\n            </div>\n        </div>\n    </div>\n</div>');
 $templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">\n    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />\n</div>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
 $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div class="modal-header">\n        <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n        <h4 class="modal-title" id="{{ modal.id }}Label">{{ modal.title }}</h4>\n    </div>\n    <div class="modal-body">\n        <div ng-include="modal.bodyTemplate"></div>\n        <p ng-if="submitError !== null" class="clearfix bg-danger">{{ submitError }}</p>\n    </div>\n    <div class="modal-footer">\n        <button ng-click="close()" type="button" class="btn btn-default btn-lg" data-dismiss="modal">Close</button>\n        <button ng-show="modal.hasSubmit" ng-disabled="dialogForm.$invalid" ng-click="submit()" type="button" class="btn btn-primary btn-lg">Submit</button>\n    </div>\n</form>');

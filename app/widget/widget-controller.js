@@ -12,9 +12,21 @@ angular.module('ptAnywhere.widget')
                 var endpoint = consoleEndpoint;
                 modalInstance = $uibModal.open({
                     templateUrl: 'cmd-dialog.html',
-                    controller: 'CommandLineController',
+                    controller: //'CommandLineController'
+                                ['$location', '$scope', '$uibModalInstance', 'locale', 'redirectionPath', 'wsUrl',
+                                    function($location, $scope, $uibModalInstance, locale, redirectionPath, wsUrl) {
+                                        var self = this;
+                                        self.title = locale.commandLineDialog.title;
+                                        // To be used in child controller:
+                                        $scope.onDisconnect = function() {
+                                            $location.path(redirectionPath);
+                                            $uibModalInstance.dismiss('websocket closed');
+                                        };
+                                        $scope.endpoint = wsUrl;
+                                    }],
+                    controllerAs: 'modal',
                     resolve: {
-                        endpoint: function () {
+                        wsUrl: function () {
                             return endpoint;
                         }
                     },
