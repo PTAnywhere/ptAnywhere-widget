@@ -6,18 +6,20 @@ angular.module('ptAnywhere.api.websocket')
         function listenWebsocket(websocket) {
 
             websocket.onOpen(function() {
-                $log.debug('WebSocket connection opened.');
                 callbacks.connected();
             });
 
             websocket.onMessage(function(event) {
-                var msg = JSON.parse(event.data);
-                if (msg.hasOwnProperty('prompt')) {  // At the beginning of the session
-                    callbacks.output(msg.prompt);
-                } else if (msg.hasOwnProperty('out')) {
-                    callbacks.output(msg.out);
-                } else if (msg.hasOwnProperty('history')) {
-                    callbacks.history(msg.history);
+                // FIXME The following guard only exists because of the associated unit test.
+                if (typeof event === 'object' && 'data' in event) {
+                    var msg = JSON.parse(event.data);
+                    if (msg.hasOwnProperty('prompt')) {  // At the beginning of the session
+                        callbacks.output(msg.prompt);
+                    } else if (msg.hasOwnProperty('out')) {
+                        callbacks.output(msg.out);
+                    } else if (msg.hasOwnProperty('history')) {
+                        callbacks.history(msg.history);
+                    }
                 }
             });
 

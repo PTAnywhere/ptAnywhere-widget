@@ -1,14 +1,13 @@
-<div class="modal-header" style="height: 10%;">
+<div class="modal-header">
     <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>
     <h4 class="modal-title" id="cmdModal">
         <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>
         {{ title }}
     </h4>
 </div>
-<div class="modal-body" style="height: 89%;">
-    <div class="commandline" disabled="disabled" output="output" input="lastLine"
-         send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>
-    <!--<div class="iframeWrapper">
-        <iframe class="terminal" src="{{ endpoint }}"></iframe>
-    </div>-->
+<div class="modal-body">
+    <div scroll-glue>
+        <div class="commandline" disabled="disabled" output="output" input="lastLine"
+             send-command="send(command)" on-previous="onPreviousCommand()" on-next="onNextCommand()"></div>
+    </div>
 </div>

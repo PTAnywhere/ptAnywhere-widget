@@ -9,7 +9,6 @@
 .commandline {
     font: 10pt monospace, Helvetica, Arial;
     height: 100%;
-    overflow: scroll;
 }
 
 .commandline .prompt {

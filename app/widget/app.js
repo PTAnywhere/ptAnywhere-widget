@@ -1,4 +1,4 @@
-angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap',
+angular.module('ptAnywhere.widget', ['ngRoute', 'ui.bootstrap', 'luegg.directives', // For CMD dialog
                                      'ptAnywhere.locale', 'ptAnywhere.widget.configuration', 'ptAnywhere.api.http',
                                      'ptAnywhere.widget.console', 'ptAnywhere.widget.create', 'ptAnywhere.widget.link',
                                      'ptAnywhere.widget.map', 'ptAnywhere.widget.update'])

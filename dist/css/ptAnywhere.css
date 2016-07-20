@@ -145,6 +145,20 @@ div.vis-network div.vis-manipulation div.vis-separator-line {
   height: 100%;
 }
 
+.terminal-dialog .modal-header {
+    height: 10%;
+}
+
+.terminal-dialog .modal-body {
+    height: 90%;
+}
+
+.terminal-dialog [scroll-glue] {
+    height: 100%;
+    overflow-y: scroll;
+}
+
+
 /* Ugly fix for CSS on the iPad. */
 /*  http://stackoverflow.com/questions/16937070/iframe-size-with-css-on-ios */
 div.iframeWrapper {

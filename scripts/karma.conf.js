@@ -19,6 +19,7 @@ module.exports = function(config) {
       'scripts/bower_components/angular-mocks/angular-mocks.js',
       'scripts/bower_components/angular-websocket/dist/angular-websocket.js',
       'scripts/bower_components/angular-websocket/dist/angular-websocket-mock.js',
+      'scripts/bower_components/angular-scroll-glue/src/scrollglue.js',
       //'scripts/bower_components/vis/dist/**',
       'app/**',  // The files to be tested
       'test/**'  // The tests

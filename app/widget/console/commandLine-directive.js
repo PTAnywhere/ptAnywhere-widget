@@ -19,7 +19,7 @@ angular.module('ptAnywhere.widget.console')
         // Fix for Chrome and Safari where e.key is undefined
         function fix(e) {
             if (typeof e.key === 'undefined') {
-                switch(keyCode) {
+                switch(e.keyCode) {
                     case 9: e.key = 'Tab'; break;
                     case 13: e.key = 'Enter'; break;
                     case 38: e.key = 'ArrowUp'; break;

@@ -3,7 +3,7 @@ angular.module('ptAnywhere.widget.console')
                                           function($scope, $uibModalInstance, locale, wsApi, history, endpoint) {
         $scope.title = locale.commandLineDialog.title;
         $scope.disabled = true;
-        $scope.output = [''];
+        $scope.output = [];
         $scope.lastLine = {
             prompt: '',
             command: ''
@@ -36,6 +36,7 @@ angular.module('ptAnywhere.widget.console')
         };
 
         wsApi.onConnect(function() {
+                    $log.debug('WebSocket connection opened.');
                     $scope.disabled = false;
                     if(!$scope.$$phase) {
                         $scope.$apply();
@@ -59,7 +60,6 @@ angular.module('ptAnywhere.widget.console')
                         console.log($scope.output);
                     }
                     $scope.lastLine.prompt += lines[lines.length-1];
-                    //TODO scrollToBottom();
                     //TODO $('.' + html.cCurrent, cmd.selector).focus();
 
                     if(!$scope.$$phase) {
