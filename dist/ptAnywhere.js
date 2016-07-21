@@ -203,10 +203,16 @@ angular.module('ptAnywhere.widget')
                                     function($location, $scope, $uibModalInstance, locale, redirectionPath, wsUrl) {
                                         var self = this;
                                         self.title = locale.commandLineDialog.title;
+                                        $scope.close = function () {
+                                            $uibModalInstance.dismiss('close button');
+                                        };
                                         // To be used in child controller:
-                                        $scope.onDisconnect = function() {
-                                            $location.path(redirectionPath);
-                                            $uibModalInstance.dismiss('websocket closed');
+                                        $scope.onDisconnect = function(event) {
+                                            // Code 1000: Connection intentionally closed. E.g., when the user closes the modal on purpose.
+                                            if (event.code !== 1000) {
+                                                $location.path(redirectionPath);
+                                                $uibModalInstance.dismiss('websocket closed');
+                                            }
                                         };
                                         $scope.endpoint = wsUrl;
                                     }],
@@ -790,7 +796,7 @@ angular.module('ptAnywhere.widget.console')
                             $scope.$apply();
                         }
                     } else {
-                        self.onDisconnect();
+                        self.onDisconnect(event);
                     }
                 });
 
@@ -848,10 +854,9 @@ angular.module('ptAnywhere.widget.console')
             },
             templateUrl: 'commandline.html',
             link: function($scope, $element, $attrs) {
-                var interactiveEl = $('.interactive', $element);
-                var currentEl = $('input', interactiveEl);
+                var inputEl = $('div.interactive input', $element);
 
-                interactiveEl.keydown(function(e) {
+                inputEl.keydown(function(e) {
                     fix(e);
                     if (e.key === 'Enter' || e.key === 'Tab') {  // or if (e.keyCode == 13 || e.keyCode == 9)
                         var commandPressed =  $scope.input.command;  // It does not have '\n' or '\t' at this stage
@@ -863,7 +868,7 @@ angular.module('ptAnywhere.widget.console')
                     }
                 });
 
-                interactiveEl.keyup(function(e) {
+                inputEl.keyup(function(e) {
                     fix(e);
                     if (e.key === 'ArrowUp') {
                         $scope.onPrevious();
@@ -878,8 +883,8 @@ angular.module('ptAnywhere.widget.console')
                     }
                 });
 
-                $scope.focusOnElement = function() {
-                    currentEl.focus();
+                $scope.focusOnInput = function() {
+                    inputEl.focus();
                 };
             }
         };
@@ -1605,7 +1610,7 @@ angular.module('ptAnywhere.widget.update')
         self._load();
     }]);
 angular.module('ptAnywhere.templates').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ modal.title }}\n    </h4>\n</div>\n<div class="modal-body">\n    <div scroll-glue>\n        <!-- Uses variables form parent controller: endpoint and onDisconnect-->\n        <div ng-controller="CommandLineController as cmd">\n            <div class="commandline" disabled="cmd.disabled" output="cmd.output" input="cmd.lastLine"\n                    send-command="cmd.send(command)" on-previous="cmd.onPreviousCommand()" on-next="cmd.onNextCommand()">\n            </div>\n        </div>\n    </div>\n</div>');
-$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">\n    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />\n</div>');
+$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt">\n    <span class="input-group-addon prompt" ng-bind="input.prompt" ng-click="focusOnInput()"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled"\n           autocapitalize="off" autocorrect="off" spellcheck="false">\n</div>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
 $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div class="modal-header">\n        <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n        <h4 class="modal-title" id="{{ modal.id }}Label">{{ modal.title }}</h4>\n    </div>\n    <div class="modal-body">\n        <div ng-include="modal.bodyTemplate"></div>\n        <p ng-if="submitError !== null" class="clearfix bg-danger">{{ submitError }}</p>\n    </div>\n    <div class="modal-footer">\n        <button ng-click="close()" type="button" class="btn btn-default btn-lg" data-dismiss="modal">Close</button>\n        <button ng-show="modal.hasSubmit" ng-disabled="dialogForm.$invalid" ng-click="submit()" type="button" class="btn btn-primary btn-lg">Submit</button>\n    </div>\n</form>');
 $templateCache.put('input-ipaddress.html','<div class="clearfix form-group has-feedback" ng-class="{\'has-error\': formController.$invalid}">\n    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>\n    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"\n           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >\n    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>\n    <span id="{{ id }}-error" class="sr-only">(error)</span>\n</div>');

@@ -46,10 +46,9 @@ angular.module('ptAnywhere.widget.console')
             },
             templateUrl: 'commandline.html',
             link: function($scope, $element, $attrs) {
-                var interactiveEl = $('.interactive', $element);
-                var currentEl = $('input', interactiveEl);
+                var inputEl = $('div.interactive input', $element);
 
-                interactiveEl.keydown(function(e) {
+                inputEl.keydown(function(e) {
                     fix(e);
                     if (e.key === 'Enter' || e.key === 'Tab') {  // or if (e.keyCode == 13 || e.keyCode == 9)
                         var commandPressed =  $scope.input.command;  // It does not have '\n' or '\t' at this stage
@@ -61,7 +60,7 @@ angular.module('ptAnywhere.widget.console')
                     }
                 });
 
-                interactiveEl.keyup(function(e) {
+                inputEl.keyup(function(e) {
                     fix(e);
                     if (e.key === 'ArrowUp') {
                         $scope.onPrevious();
@@ -76,8 +75,8 @@ angular.module('ptAnywhere.widget.console')
                     }
                 });
 
-                $scope.focusOnElement = function() {
-                    currentEl.focus();
+                $scope.focusOnInput = function() {
+                    inputEl.focus();
                 };
             }
         };

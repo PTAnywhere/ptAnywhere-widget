@@ -4,7 +4,8 @@
         <div ng-show="!line">&nbsp;</div>
     </div>
 </div>
-<div class="interactive input-group" ng-show="input.prompt" ng-click="focusOnElement()">
-    <span class="input-group-addon prompt" ng-bind="input.prompt"></span>
-    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled" />
+<div class="interactive input-group" ng-show="input.prompt">
+    <span class="input-group-addon prompt" ng-bind="input.prompt" ng-click="focusOnInput()"></span>
+    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled"
+           autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
 </div>
