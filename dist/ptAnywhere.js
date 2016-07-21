@@ -631,7 +631,7 @@ angular.module('ptAnywhere.widget.configuration', [])
             }
         }
     }]);
-// This submodule can be part of the widget or used alone in its own webpage (to isolate console).
+// This submodule can be part of a widget or be used alone in its own webpage (to isolate console functionality).
 angular.module('ptAnywhere.widget.console', ['ptAnywhere.api.websocket', 'ptAnywhere.templates']);
 angular.module('ptAnywhere.widget.console')
     .controller('CommandLineController', ['$log', '$scope', '$injector', 'WebsocketApiService', 'HistoryService',
