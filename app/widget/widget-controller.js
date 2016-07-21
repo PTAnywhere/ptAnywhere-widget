@@ -17,10 +17,16 @@ angular.module('ptAnywhere.widget')
                                     function($location, $scope, $uibModalInstance, locale, redirectionPath, wsUrl) {
                                         var self = this;
                                         self.title = locale.commandLineDialog.title;
+                                        $scope.close = function () {
+                                            $uibModalInstance.dismiss('close button');
+                                        };
                                         // To be used in child controller:
-                                        $scope.onDisconnect = function() {
-                                            $location.path(redirectionPath);
-                                            $uibModalInstance.dismiss('websocket closed');
+                                        $scope.onDisconnect = function(event) {
+                                            // Code 1000: Connection intentionally closed. E.g., when the user closes the modal on purpose.
+                                            if (event.code !== 1000) {
+                                                $location.path(redirectionPath);
+                                                $uibModalInstance.dismiss('websocket closed');
+                                            }
                                         };
                                         $scope.endpoint = wsUrl;
                                     }],

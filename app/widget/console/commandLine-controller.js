@@ -155,7 +155,7 @@ angular.module('ptAnywhere.widget.console')
                             $scope.$apply();
                         }
                     } else {
-                        self.onDisconnect();
+                        self.onDisconnect(event);
                     }
                 });
 
