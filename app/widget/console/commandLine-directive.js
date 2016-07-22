@@ -29,11 +29,6 @@ angular.module('ptAnywhere.widget.console')
             }
         }
 
-        function executeCommand($scope, commandToExecute) {
-            $scope.sendCommand({command: commandToExecute});
-            $scope.input.command = '';
-        }
-
         return {
             restrict: 'C',
             scope: {
@@ -63,9 +58,9 @@ angular.module('ptAnywhere.widget.console')
                 inputEl.keyup(function(e) {
                     fix(e);
                     if (e.key === 'ArrowUp') {
-                        $scope.onPrevious();
+                        $scope.$apply($scope.onPrevious);
                     } else if (e.key === 'ArrowDown') {
-                        $scope.onNext();
+                        $scope.$apply($scope.onNext);
                     } else {
                         // In PT, when '?' is pressed, the command is send as it is.
                         var lastChar = $scope.input.command.slice(-1);

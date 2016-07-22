@@ -39,18 +39,12 @@ angular.module('ptAnywhere.widget.link')
                                 $scope.selected.toIface = $scope.toInterfaces[0];
                                 $scope.modal.hasSubmit = true;
                             }
-                            if(!$scope.$$phase) {
-                                $scope.$apply();
-                            }
                         }, function(response) {
                             $log.error('Interfaces to be linked could not be loaded.', response);
                             if (response.status === 410) {
                                 $uibModalInstance.dismiss('cancel');
                             } else {
                                 $scope.loadError = '(error code: ' + response.status + ')';
-                                if(!$scope.$$phase) {
-                                    $scope.$apply();
-                                }
                             }
                         });
             }

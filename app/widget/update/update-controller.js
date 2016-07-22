@@ -44,9 +44,6 @@ angular.module('ptAnywhere.widget.update')
             api.getAllPorts(deviceToEdit)
                 .then(function(ports) {
                     $scope.interfaces = ports;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 }, function(response) {
                     $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
                     $uibModalInstance.dismiss('cancel');

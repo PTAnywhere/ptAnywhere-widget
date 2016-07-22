@@ -686,9 +686,6 @@ angular.module('ptAnywhere.widget.console')
             self.lastLine.command = '';
             self.clearCached();
             history.markToUpdate();
-            if(!$scope.$$phase) {
-                $scope.$apply();
-            }
         };
 
         self.onPreviousCommand = function () {
@@ -702,9 +699,6 @@ angular.module('ptAnywhere.widget.console')
                 if (previous !== null) {
                     self.lastLine.command = previous;
                     self.showingCached = false;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 }
             }
         };
@@ -722,18 +716,12 @@ angular.module('ptAnywhere.widget.console')
                         self.showingCached = true;
                     }
                 }
-                if(!$scope.$$phase) {
-                    $scope.$apply();
-                }
             }
         };
 
         wsApi.onConnect(function() {
                     $log.debug('WebSocket connection opened.');
                     self.disabled = false;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 })
                 .onOutput(function(message) {
                     // Not sure that we will ever get more than a line, but just in case.
@@ -752,26 +740,16 @@ angular.module('ptAnywhere.widget.console')
                         }
                     }
                     self.lastLine.prompt += lines[lines.length-1];
-
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 })
                 .onCommandReplace(function(command) {
                     var showCurrentIfNull = false;
                     if (command !== null) {
                         self.lastLine.command = command;
-                        if(!$scope.$$phase) {
-                            $scope.$apply();
-                        }
                     }
                 })
                 .onHistory(function(historicalCommands) {
                     history.update(historicalCommands, function(onPreviousCommand) {
                         self.lastLine.command = onPreviousCommand;
-                        if(!$scope.$$phase) {
-                            $scope.$apply();
-                        }
                     });
                 })
                 .onError(function(event) {
@@ -780,10 +758,6 @@ angular.module('ptAnywhere.widget.console')
                     self.disabled = true;
                     self.lastLine.prompt = null;  // Hide div which handles user input
                     self.output = ['WebSocket error'];
-
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 })
                 .onDisconnect(function(event) {
                     $log.warn('WebSocket connection closed.', event);
@@ -791,10 +765,6 @@ angular.module('ptAnywhere.widget.console')
                         self.disabled = true;
                         self.lastLine.prompt = null;  // Hide div which handles user input
                         self.output = ['WebSocket closed'];
-
-                        if(!$scope.$$phase) {
-                            $scope.$apply();
-                        }
                     } else {
                         self.onDisconnect(event);
                     }
@@ -837,11 +807,6 @@ angular.module('ptAnywhere.widget.console')
             }
         }
 
-        function executeCommand($scope, commandToExecute) {
-            $scope.sendCommand({command: commandToExecute});
-            $scope.input.command = '';
-        }
-
         return {
             restrict: 'C',
             scope: {
@@ -871,9 +836,9 @@ angular.module('ptAnywhere.widget.console')
                 inputEl.keyup(function(e) {
                     fix(e);
                     if (e.key === 'ArrowUp') {
-                        $scope.onPrevious();
+                        $scope.$apply($scope.onPrevious);
                     } else if (e.key === 'ArrowDown') {
-                        $scope.onNext();
+                        $scope.$apply($scope.onNext);
                     } else {
                         // In PT, when '?' is pressed, the command is send as it is.
                         var lastChar = $scope.input.command.slice(-1);
@@ -1114,18 +1079,12 @@ angular.module('ptAnywhere.widget.link')
                                 $scope.selected.toIface = $scope.toInterfaces[0];
                                 $scope.modal.hasSubmit = true;
                             }
-                            if(!$scope.$$phase) {
-                                $scope.$apply();
-                            }
                         }, function(response) {
                             $log.error('Interfaces to be linked could not be loaded.', response);
                             if (response.status === 410) {
                                 $uibModalInstance.dismiss('cancel');
                             } else {
                                 $scope.loadError = '(error code: ' + response.status + ')';
-                                if(!$scope.$$phase) {
-                                    $scope.$apply();
-                                }
                             }
                         });
             }
@@ -1547,9 +1506,6 @@ angular.module('ptAnywhere.widget.update')
             api.getAllPorts(deviceToEdit)
                 .then(function(ports) {
                     $scope.interfaces = ports;
-                    if(!$scope.$$phase) {
-                        $scope.$apply();
-                    }
                 }, function(response) {
                     $log.error('Ports for the device ' + deviceToEdit.id + ' could not be loaded.', response);
                     $uibModalInstance.dismiss('cancel');
