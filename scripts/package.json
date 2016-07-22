@@ -3,7 +3,7 @@
   "description": "User friendly interface to use PT Anywhere.",
   "homepage": "http://pt-anywhere.kmi.open.ac.uk",
   "repository": "https://github.com/PTAnywhere/ptAnywhere-widget",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "devDependencies": {
     "bower": "~1.7.9",
     "gulp": "^3.9.1",

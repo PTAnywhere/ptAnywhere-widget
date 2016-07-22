@@ -1,7 +1,7 @@
 angular.module('ptAnywhere.widget.update')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
+    .controller('UpdateController', ['$log', '$scope', '$q', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
                                      // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
+                                    function($log, $scope, $q, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
         $scope.submitError = null;
         $scope.interfaces = null;
@@ -78,7 +78,7 @@ angular.module('ptAnywhere.widget.update')
                                 return error;
                             });
             } else {
-                update = Promise.resolve(null);  // No modification return.
+                update = $q.resolve(null);  // No modification return.
             }
             // Sequential order as API cannot cope with simultaneous changes when device name is modified.
             if (self._hasInterfaceChanged()) {

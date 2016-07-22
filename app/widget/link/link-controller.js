@@ -1,7 +1,7 @@
 angular.module('ptAnywhere.widget.link')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService',
+    .controller('LinkController', ['$log', '$scope', '$q', '$uibModalInstance', 'locale', 'HttpApiService',
                                     'fromDevice', 'toDevice',
-                                    function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
+                                    function($log, $scope, $q, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;
         $scope.fromDeviceName = fromDevice.label;
         $scope.toDeviceName = toDevice.label;
@@ -29,7 +29,7 @@ angular.module('ptAnywhere.widget.link')
                     api.getAvailablePorts(fromDevice),
                     api.getAvailablePorts(toDevice)
                 ];
-                Promise.all(arrayOfPromises)
+                $q.all(arrayOfPromises)
                         .then(function(arrayOfResponses) {
                             $scope.fromInterfaces = arrayOfResponses[0];
                             $scope.toInterfaces = arrayOfResponses[1];

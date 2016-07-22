@@ -1,6 +1,6 @@
 /**
  * ptAnywhere - User friendly interface to use PT Anywhere.
- * @version v2.0.1
+ * @version v2.0.2
  * @link http://pt-anywhere.kmi.open.ac.uk
  */
 angular.module('ptAnywhere', []);
@@ -1074,9 +1074,9 @@ angular.module('ptAnywhere.widget.create')
     }]);
 angular.module('ptAnywhere.widget.link', ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http']);
 angular.module('ptAnywhere.widget.link')
-    .controller('LinkController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService',
+    .controller('LinkController', ['$log', '$scope', '$q', '$uibModalInstance', 'locale', 'HttpApiService',
                                     'fromDevice', 'toDevice',
-                                    function($log, $scope, $uibModalInstance, locale, api, fromDevice, toDevice) {
+                                    function($log, $scope, $q, $uibModalInstance, locale, api, fromDevice, toDevice) {
         var self = this;
         $scope.fromDeviceName = fromDevice.label;
         $scope.toDeviceName = toDevice.label;
@@ -1104,7 +1104,7 @@ angular.module('ptAnywhere.widget.link')
                     api.getAvailablePorts(fromDevice),
                     api.getAvailablePorts(toDevice)
                 ];
-                Promise.all(arrayOfPromises)
+                $q.all(arrayOfPromises)
                         .then(function(arrayOfResponses) {
                             $scope.fromInterfaces = arrayOfResponses[0];
                             $scope.toInterfaces = arrayOfResponses[1];
@@ -1502,9 +1502,9 @@ angular.module('ptAnywhere.widget')
         };
     }]);
 angular.module('ptAnywhere.widget.update')
-    .controller('UpdateController', ['$log', '$scope', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
+    .controller('UpdateController', ['$log', '$scope', '$q', '$uibModalInstance', 'locale', 'HttpApiService', 'device',
                                      // Device is injected in $uiModal's resolve.
-                                    function($log, $scope, $uibModalInstance, locale, api, deviceToEdit) {
+                                    function($log, $scope, $q, $uibModalInstance, locale, api, deviceToEdit) {
         var self = this;
         $scope.submitError = null;
         $scope.interfaces = null;
@@ -1581,7 +1581,7 @@ angular.module('ptAnywhere.widget.update')
                                 return error;
                             });
             } else {
-                update = Promise.resolve(null);  // No modification return.
+                update = $q.resolve(null);  // No modification return.
             }
             // Sequential order as API cannot cope with simultaneous changes when device name is modified.
             if (self._hasInterfaceChanged()) {
@@ -1610,7 +1610,7 @@ angular.module('ptAnywhere.widget.update')
         self._load();
     }]);
 angular.module('ptAnywhere.templates').run(['$templateCache', function($templateCache) {$templateCache.put('cmd-dialog.html','<div class="modal-header">\n    <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n    <h4 class="modal-title" id="cmdModal">\n        <span class="glyphicon glyphicon-console" style="margin-right:10px" aria-hidden="true"></span>\n        {{ modal.title }}\n    </h4>\n</div>\n<div class="modal-body">\n    <div scroll-glue>\n        <!-- Uses variables form parent controller: endpoint and onDisconnect-->\n        <div ng-controller="CommandLineController as cmd">\n            <div class="commandline" disabled="cmd.disabled" output="cmd.output" input="cmd.lastLine"\n                    send-command="cmd.send(command)" on-previous="cmd.onPreviousCommand()" on-next="cmd.onNextCommand()">\n            </div>\n        </div>\n    </div>\n</div>');
-$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt">\n    <span class="input-group-addon prompt" ng-bind="input.prompt" ng-click="focusOnInput()"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled"\n           autocapitalize="off" autocorrect="off" spellcheck="false">\n</div>');
+$templateCache.put('commandline.html','<div class="messages">\n    <div ng-repeat="line in output track by $index">\n        <div class="line" ng-show="line" ng-bind="line"></div>\n        <div ng-show="!line">&nbsp;</div>\n    </div>\n</div>\n<div class="interactive input-group" ng-show="input.prompt">\n    <span class="input-group-addon prompt" ng-bind="input.prompt" ng-click="focusOnInput()"></span>\n    <input type="text" class="form-control" ng-model="input.command" ng-disabled="disabled"\n           autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">\n</div>');
 $templateCache.put('creation-dialog-body.html','<fieldset>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Name" class="control-label">{{ locale.name }}</label>\n        <input type="text" id="{{ modal.id }}Name" class="form-control input-lg" ng-model="newDevice.name" />\n    </div>\n    <div class="clearfix form-group">\n        <label for="{{ modal.id }}Type" class="control-label">{{ locale.creationDialog.type }}</label>\n        <p ng-if="deviceTypes === null">{{ locale.loading }}</p>\n        <div ng-if="deviceTypes !== null">\n            <select id="{{ modal.id }}Type" class="form-control input-lg"\n                    ng-model="newDevice.type" ng-options="type.label for type in deviceTypes">\n            </select>\n        </div>\n    </div>\n</fieldset>');
 $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div class="modal-header">\n        <button type="button" class="close" ng-click="close()"><span aria-hidden="true">&times;</span></button>\n        <h4 class="modal-title" id="{{ modal.id }}Label">{{ modal.title }}</h4>\n    </div>\n    <div class="modal-body">\n        <div ng-include="modal.bodyTemplate"></div>\n        <p ng-if="submitError !== null" class="clearfix bg-danger">{{ submitError }}</p>\n    </div>\n    <div class="modal-footer">\n        <button ng-click="close()" type="button" class="btn btn-default btn-lg" data-dismiss="modal">Close</button>\n        <button ng-show="modal.hasSubmit" ng-disabled="dialogForm.$invalid" ng-click="submit()" type="button" class="btn btn-primary btn-lg">Submit</button>\n    </div>\n</form>');
 $templateCache.put('input-ipaddress.html','<div class="clearfix form-group has-feedback" ng-class="{\'has-error\': formController.$invalid}">\n    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>\n    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"\n           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >\n    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>\n    <span id="{{ id }}-error" class="sr-only">(error)</span>\n</div>');
