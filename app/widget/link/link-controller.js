@@ -17,10 +17,6 @@ angular.module('ptAnywhere.widget.link')
             bodyTemplate: 'link-dialog-body.html',
             hasSubmit: false
         };
-        // I messed up with the inherited scope and the user-updated ng-model value when I tried to use two
-        // different variables for "selected".
-        // This a (not so ideal) solution that works (i.e., updates the value in all the scopes)
-        // because the value is hold in a reference inside the object passed through different scopes.
         $scope.selected = {fromIface: null, toIface: null};
 
         self._load = function() {

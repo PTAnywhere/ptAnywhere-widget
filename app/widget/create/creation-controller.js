@@ -16,7 +16,6 @@ angular.module('ptAnywhere.widget.create')
             {value: 'switch', label: 'Switch'},
             {value: 'pc', label: 'PC'}
         ];
-        // TODO with a better understanding on inherited scopes, I could try to create to separate variables.
         $scope.newDevice = {name: '', type: $scope.deviceTypes[0]};
 
         $scope.submit = function() {
