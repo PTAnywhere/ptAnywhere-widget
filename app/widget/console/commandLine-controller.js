@@ -99,6 +99,7 @@ angular.module('ptAnywhere.widget.console')
                         }
                     }
                     self.lastLine.prompt += lines[lines.length-1];
+                    $scope.$apply();
                 })
                 .onCommandReplace(function(command) {
                     var showCurrentIfNull = false;

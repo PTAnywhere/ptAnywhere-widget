@@ -740,6 +740,7 @@ angular.module('ptAnywhere.widget.console')
                         }
                     }
                     self.lastLine.prompt += lines[lines.length-1];
+                    $scope.$apply();
                 })
                 .onCommandReplace(function(command) {
                     var showCurrentIfNull = false;
@@ -913,7 +914,6 @@ angular.module('ptAnywhere.widget.create')
             {value: 'switch', label: 'Switch'},
             {value: 'pc', label: 'PC'}
         ];
-        // TODO with a better understanding on inherited scopes, I could try to create to separate variables.
         $scope.newDevice = {name: '', type: $scope.deviceTypes[0]};
 
         $scope.submit = function() {
@@ -1057,10 +1057,6 @@ angular.module('ptAnywhere.widget.link')
             bodyTemplate: 'link-dialog-body.html',
             hasSubmit: false
         };
-        // I messed up with the inherited scope and the user-updated ng-model value when I tried to use two
-        // different variables for "selected".
-        // This a (not so ideal) solution that works (i.e., updates the value in all the scopes)
-        // because the value is hold in a reference inside the object passed through different scopes.
         $scope.selected = {fromIface: null, toIface: null};
 
         self._load = function() {
