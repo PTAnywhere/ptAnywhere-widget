@@ -343,3 +343,8 @@ div.vis-network div.vis-manipulation div.vis-button.vis-connect {
 div.vis-network div.vis-manipulation div.vis-button.vis-connect div.vis-label::before {
   content: "\e144";
 }
+
+/* Custom button for command line (console) */
+div.vis-network div.vis-manipulation div.vis-button.vis-console div.vis-label::before {
+  content: "\e254";
+}

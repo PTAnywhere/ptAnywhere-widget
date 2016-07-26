@@ -8,9 +8,9 @@ angular.module('ptAnywhere.locale')
             edit: 'Edit',
             del: 'Delete selected',
             back: 'Back',
-            addNode: 'Add Device',
-            addEdge: 'Connect Devices',
-            editNode: 'Edit Device',
+            addNode: 'Add device',
+            addEdge: 'Connect devices',
+            editNode: 'Edit device',
             addDescription: 'Click in an empty space to place a new device.',
             edgeDescription: 'Click on a node and drag the edge to another element to connect them.',
             // BEGIN: Unused
@@ -18,8 +18,11 @@ angular.module('ptAnywhere.locale')
             editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
             createEdgeError: 'Cannot link edges to a cluster.',
             deleteClusterError: 'Clusters cannot be deleted.',
-            editClusterError: 'Clusters cannot be edited.'
+            editClusterError: 'Clusters cannot be edited.',
             // END: Unused
+            // BEGIN: Customization
+            openConsole: 'Open console'
+            // END: Customization
         },
         session: {
             creating: {

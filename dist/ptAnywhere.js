@@ -36,9 +36,9 @@ angular.module('ptAnywhere.locale')
             edit: 'Edit',
             del: 'Delete selected',
             back: 'Back',
-            addNode: 'Add Device',
-            addEdge: 'Connect Devices',
-            editNode: 'Edit Device',
+            addNode: 'Add device',
+            addEdge: 'Connect devices',
+            editNode: 'Edit device',
             addDescription: 'Click in an empty space to place a new device.',
             edgeDescription: 'Click on a node and drag the edge to another element to connect them.',
             // BEGIN: Unused
@@ -46,8 +46,11 @@ angular.module('ptAnywhere.locale')
             editEdgeDescription: 'Click on the control points and drag them to a node to connect to it.',
             createEdgeError: 'Cannot link edges to a cluster.',
             deleteClusterError: 'Clusters cannot be deleted.',
-            editClusterError: 'Clusters cannot be edited.'
+            editClusterError: 'Clusters cannot be edited.',
             // END: Unused
+            // BEGIN: Customization
+            openConsole: 'Open console'
+            // END: Customization
         },
         session: {
             creating: {
@@ -1125,7 +1128,7 @@ angular.module('ptAnywhere.widget.link')
 angular.module('ptAnywhere.widget.map',
                 ['ui.bootstrap', 'ptAnywhere.locale', 'ptAnywhere.api.http', 'ptAnywhere.widget.configuration']);
 angular.module('ptAnywhere.widget.map')
-    .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
+    .directive('networkMap', ['$timeout', 'locale', 'NetworkMapData', 'imagesUrl', function($timeout, res, mapData, imagesUrl) {
         var network;
 
         function createNetworkMap($scope, networkContainer, imagesUrl, locale) {
@@ -1192,10 +1195,6 @@ angular.module('ptAnywhere.widget.map')
 
         function isOnlyOneEdgeSelected(event) {
             return event.nodes.length === 0 && event.edges.length === 1;
-        }
-
-        function isNodeSelected(event) {
-            return event.nodes.length > 0;
         }
 
         function isShowingEndpoint(node) {
@@ -1329,7 +1328,7 @@ angular.module('ptAnywhere.widget.map')
         return {
             restrict: 'C',
             scope: {
-                onDoubleClick: '&',  // callback(selected);
+                onOpenConsole: '&',  // callback(selected);
                 onAddDevice: '&',  // interactionCallback(data.x, data.y);
                 onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
                 onEditDevice: '&',  //interactionCallback( nodes.get(data.id) );
@@ -1347,12 +1346,13 @@ angular.module('ptAnywhere.widget.map')
 
                 $scope.adaptCoordinates = toNetworkMapCoordinate;
 
-                network.on('select', function(event) {
+                network.on('selectNode', function(event) {
+                    hideEndpointsInSelectedEdges(event);
+                });
+                network.on('selectEdge', function(event) {
                     if ( isOnlyOneEdgeSelected(event) ) {
                         var edge = mapData.getEdge(event.edges[0]);
                         showEndpointsInEdge(edge);
-                    } else if ( isNodeSelected(event) ) {
-                        hideEndpointsInSelectedEdges(event);
                     }
                 });
                 network.on('deselectEdge', function(event) {
@@ -1360,13 +1360,39 @@ angular.module('ptAnywhere.widget.map')
                         hideEndpointsInSelectedEdges(event.previousSelection);
                     }
                 });
-                if ('onDoubleClick' in $scope) {
-                    network.on('doubleClick', function() {
+                if ('onOpenConsole' in $scope) {
+                    var onOpenConsole = function() {
+                        console.log('open console');
                         var selected = getSelectedNode();
                         if (selected !== null) {
-                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                            $scope.onOpenConsole({endpoint: selected.consoleEndpoint});
+                        }
+                    };
+                    network.on('doubleClick', onOpenConsole);
+
+                    var toAppend = null;  // Shared in selectNode and deselectNode
+                    var addOpenConsoleButton = function(event) {
+                        if (event.nodes.length === 1) {
+                            // Timeout so the DOM modification by vis.js happens before.
+                            $timeout(function() {
+                                if (toAppend !== null) toAppend.remove();
+                                toAppend = $('<div class="vis-separator-line"></div>' +
+                                             '<div class="vis-button vis-console"><div class="vis-label">' +
+                                             res.manipulationMenu.openConsole + '</div></div>');
+                                $('div.vis-manipulation', $element).append(toAppend);
+                                $('div.vis-console', $element).click(onOpenConsole);
+                            }, 1);
+                        }
+                    };
+                    network.on('deselectNode', function(ev) {
+                        if (toAppend !== null && ev.nodes.length !== 1 && ev.previousSelection.nodes.length === 1) {
+                            toAppend.remove();
+                            toAppend = null;
                         }
                     });
+                    network.on('selectNode', addOpenConsoleButton);
+                    // Because vis.js changes the menu after double click
+                    network.on('doubleClick', addOpenConsoleButton);
                 }
             }
         };
@@ -1568,5 +1594,5 @@ $templateCache.put('default-dialog.html','<form name="dialogForm">\n    <div cla
 $templateCache.put('input-ipaddress.html','<div class="clearfix form-group has-feedback" ng-class="{\'has-error\': formController.$invalid}">\n    <label for="{{ id }}" class="control-label"><span ng-transclude></span></label>\n    <input type="text" ng-pattern="ipAddrPattern" ng-model="value"\n           name="{{ name }}" id="{{ id }}" class="form-control input-lg" aria-describedby="{{ id }}-error" >\n    <span class="glyphicon glyphicon-remove form-control-feedback" aria-hidden="true" ng-show="formController.$invalid"></span>\n    <span id="{{ id }}-error" class="sr-only">(error)</span>\n</div>');
 $templateCache.put('link-dialog-body.html','<div ng-show="isLoadingInterfaces() && loadError === null">{{ locale.loadingInfo }}</div>\n<div ng-show="!isLoadingInterfaces()">\n    <div ng-show="availableInterfaces()">\n        <p>{{ locale.linkDialog.select }}</p>\n        <div class="clearfix form-group">\n            <label for="{{modal.id}}FromIface" class="col-md-3 fromDeviceName">{{ fromDeviceName }}</label>\n            <div class="col-md-9" ng-if="fromInterfaces !== null">\n                <select id="{{modal.id}}FromIface" class="form-control input-lg" size="1"\n                        ng-model="selected.fromIface" ng-options="iface.portName for iface in fromInterfaces">\n                </select>\n            </div>\n        </div>\n        <div class="clearfix form-group">\n            <label for="{{modal.id}}ToIface" class="col-md-3 toDeviceName">{{ toDeviceName }}</label>\n            <div class="col-md-9" ng-if="toInterfaces !== null">\n                <select id="{{modal.id}}ToIface" class="form-control input-lg" size="1"\n                        ng-model="selected.toIface" ng-options="iface.portName for iface in toInterfaces">\n                </select>\n            </div>\n        </div>\n    </div>\n    <div ng-show="!availableInterfaces()">\n        <p>{{ locale.linkDialog.error.unavailability }}</p>\n    </div>\n</div>\n<div ng-show="loadError !== null">\n    <p>{{ locale.linkDialog.error.loading }}</p>\n    <p>{{ loadError }}</p>\n</div>');
 $templateCache.put('loading.html','<div class="loading" ng-controller="SessionLoadingController as loading">\n    <img class="loading-icon" ng-src="{{ loading.path }}/loading.gif" alt="Loading network topology..." />\n    <p>{{ loading.loading }}</p>\n    <p>{{ loading.message }}</p>\n</div>');
-$templateCache.put('main-widget.html','<div ng-controller="WidgetController as widget">\n    <div class="network networkMap"\n         on-double-click="widget.openConsole(endpoint)"\n         on-add-device="widget.onAddDevice(x, y)"\n         on-add-link="widget.onAddLink(fromDevice, toDevice)"\n         on-edit-device="widget.onEditDevice(device)"\n         on-delete-device="widget.onDeleteDevice(device)"\n         on-delete-link="widget.onDeleteLink(link)"\n         adapt-coordinates="widget.getNetworkCoordinates"\n    ></div>\n    <div class="creation-menu">\n        <fieldset>\n            <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12">\n                <div class="row">\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="cloud" src="cloud.png"\n                             drag-to=".map" type="cloud" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Cloud</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="router" src="router.png"\n                             drag-to=".map" type="router" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Router</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="switch" src="switch.png"\n                             drag-to=".map" type="switch" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Switch</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="pc" src="pc.png"\n                             drag-to=".map" type="pc" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Pc</figcaption>\n                    </figure>\n                </div>\n            </div>\n        </fieldset>\n    </div>\n</div>');
+$templateCache.put('main-widget.html','<div ng-controller="WidgetController as widget">\n    <div class="network networkMap"\n         on-open-console="widget.openConsole(endpoint)"\n         on-add-device="widget.onAddDevice(x, y)"\n         on-add-link="widget.onAddLink(fromDevice, toDevice)"\n         on-edit-device="widget.onEditDevice(device)"\n         on-delete-device="widget.onDeleteDevice(device)"\n         on-delete-link="widget.onDeleteLink(link)"\n         adapt-coordinates="widget.getNetworkCoordinates"\n    ></div>\n    <div class="creation-menu">\n        <fieldset>\n            <div class="col-md-8 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12">\n                <div class="row">\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="cloud" src="cloud.png"\n                             drag-to=".map" type="cloud" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Cloud</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="router" src="router.png"\n                             drag-to=".map" type="router" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Router</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="switch" src="switch.png"\n                             drag-to=".map" type="switch" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Switch</figcaption>\n                    </figure>\n                    <figure class="col-md-3 col-sm-3 col-xs-3 text-center">\n                        <div class="draggableDevice" alt="pc" src="pc.png"\n                             drag-to=".map" type="pc" on-drop="widget.onDrop(device)"></div>\n                        <figcaption>Pc</figcaption>\n                    </figure>\n                </div>\n            </div>\n        </fieldset>\n    </div>\n</div>');
 $templateCache.put('update-dialog-body.html','<uib-tabset justified="true">\n    <uib-tab>\n        <uib-tab-heading>{{ locale.modificationDialog.globalSettings }}</uib-tab-heading>\n        <div class="clearfix form-group">\n            <label for="{{ modal.id }}-name">{{ locale.name }}</label>\n            <input type="text" ng-model="device.name" id="{{ modal.id }}-name" class="form-control input-lg" />\n        </div>\n        <div class="inputIpAddress" ng-show="device.defaultGateway !== null"\n             id="{{ modal.id }}-default-gw" name="defaultgw"\n             ng-model="device.defaultGateway" form-controller="dialogForm.defaultgw">\n            {{ locale.modificationDialog.defaultGW }}\n        </div>\n    </uib-tab>\n    <uib-tab>\n        <uib-tab-heading>{{ locale.modificationDialog.interfaces }}</uib-tab-heading>\n        <div ng-show="interfaces === null">{{ locale.loadingInfo }}</div>\n        <div ng-show="interfaces !== null">\n            <div class="clearfix form-group">\n                <label for="{{ modal.id }}-ifaces" class="control-label">{{ locale.name }}</label>\n                <select id="{{ modal.id }}-ifaces" class="form-control input-lg" size="1"\n                        ng-model="interface.selected" ng-options="iface.portName for iface in interfaces">\n                </select>\n            </div>\n            <hr />\n            <div class="clearfix form-group" ng-show="interface.ipAddr !== null">\n                <div class="inputIpAddress" id="{{ modal.id }}-ipaddr" name="ipaddr"\n                     ng-model="interface.ipAddr" form-controller="dialogForm.ipaddr">\n                    {{ locale.modificationDialog.ipAddress }}\n                </div>\n                <div class="inputIpAddress" id="{{ modal.id }}-subnet" name="subnet"\n                     ng-model="interface.subnet" form-controller="dialogForm.subnet">\n                    {{ locale.modificationDialog.subnetMask }}\n                </div>\n            </div>\n            <div class="clearfix form-group" ng-show="interface.ipAddr === null">\n                <p class="col-md-12">{{ locale.modificationDialog.noSettings }}</p>\n            </div>\n        </div>\n    </uib-tab>\n</uib-tabset>\n');}]);

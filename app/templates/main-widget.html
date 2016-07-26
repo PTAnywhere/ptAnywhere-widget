@@ -1,6 +1,6 @@
 <div ng-controller="WidgetController as widget">
     <div class="network networkMap"
-         on-double-click="widget.openConsole(endpoint)"
+         on-open-console="widget.openConsole(endpoint)"
          on-add-device="widget.onAddDevice(x, y)"
          on-add-link="widget.onAddLink(fromDevice, toDevice)"
          on-edit-device="widget.onEditDevice(device)"

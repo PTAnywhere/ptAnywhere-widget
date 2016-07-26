@@ -1,5 +1,5 @@
 angular.module('ptAnywhere.widget.map')
-    .directive('networkMap', ['locale', 'NetworkMapData', 'imagesUrl', function(res, mapData, imagesUrl) {
+    .directive('networkMap', ['$timeout', 'locale', 'NetworkMapData', 'imagesUrl', function($timeout, res, mapData, imagesUrl) {
         var network;
 
         function createNetworkMap($scope, networkContainer, imagesUrl, locale) {
@@ -66,10 +66,6 @@ angular.module('ptAnywhere.widget.map')
 
         function isOnlyOneEdgeSelected(event) {
             return event.nodes.length === 0 && event.edges.length === 1;
-        }
-
-        function isNodeSelected(event) {
-            return event.nodes.length > 0;
         }
 
         function isShowingEndpoint(node) {
@@ -203,7 +199,7 @@ angular.module('ptAnywhere.widget.map')
         return {
             restrict: 'C',
             scope: {
-                onDoubleClick: '&',  // callback(selected);
+                onOpenConsole: '&',  // callback(selected);
                 onAddDevice: '&',  // interactionCallback(data.x, data.y);
                 onAddLink: '&',  // interactionCallback(fromDevice, toDevice);
                 onEditDevice: '&',  //interactionCallback( nodes.get(data.id) );
@@ -221,12 +217,13 @@ angular.module('ptAnywhere.widget.map')
 
                 $scope.adaptCoordinates = toNetworkMapCoordinate;
 
-                network.on('select', function(event) {
+                network.on('selectNode', function(event) {
+                    hideEndpointsInSelectedEdges(event);
+                });
+                network.on('selectEdge', function(event) {
                     if ( isOnlyOneEdgeSelected(event) ) {
                         var edge = mapData.getEdge(event.edges[0]);
                         showEndpointsInEdge(edge);
-                    } else if ( isNodeSelected(event) ) {
-                        hideEndpointsInSelectedEdges(event);
                     }
                 });
                 network.on('deselectEdge', function(event) {
@@ -234,13 +231,40 @@ angular.module('ptAnywhere.widget.map')
                         hideEndpointsInSelectedEdges(event.previousSelection);
                     }
                 });
-                if ('onDoubleClick' in $scope) {
-                    network.on('doubleClick', function() {
+                if ('onOpenConsole' in $scope) {
+                    var onOpenConsole = function() {
                         var selected = getSelectedNode();
                         if (selected !== null) {
-                            $scope.onDoubleClick({endpoint: selected.consoleEndpoint});
+                            $scope.onOpenConsole({endpoint: selected.consoleEndpoint});
+                        }
+                    };
+                    network.on('doubleClick', onOpenConsole);
+
+                    /* BEGIN tweak to vis.js */
+                    var toAppend = null;  // Shared in selectNode and deselectNode
+                    var addOpenConsoleButton = function(event) {
+                        if (event.nodes.length === 1) {
+                            // Timeout so the DOM modification by vis.js happens before.
+                            $timeout(function() {
+                                if (toAppend !== null) toAppend.remove();
+                                toAppend = $('<div class="vis-separator-line"></div>' +
+                                             '<div class="vis-button vis-console"><div class="vis-label">' +
+                                             res.manipulationMenu.openConsole + '</div></div>');
+                                $('div.vis-manipulation', $element).append(toAppend);
+                                $('div.vis-console', $element).click(onOpenConsole);
+                            }, 1);
+                        }
+                    };
+                    network.on('deselectNode', function(ev) {
+                        if (toAppend !== null && ev.nodes.length !== 1 && ev.previousSelection.nodes.length === 1) {
+                            toAppend.remove();
+                            toAppend = null;
                         }
                     });
+                    network.on('selectNode', addOpenConsoleButton);
+                    // Because vis.js changes the manipulation menu after a double click
+                    network.on('doubleClick', addOpenConsoleButton);
+                    /* END tweak to vis.js */
                 }
             }
         };
