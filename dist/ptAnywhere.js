@@ -1185,12 +1185,12 @@ angular.module('ptAnywhere.widget.map')
         }
 
         function getSelectedNode() {
-            var selected = network.getSelection();
-            if (selected.nodes.length !== 1) { // Only if just one is selected
-                console.log('Only one device is supposed to be selected. Instead ' + selected.nodes.length + ' are selected.');
+            var selected = network.getSelectedNodes();
+            if (selected.length !== 1) { // Only if just one is selected
+                console.log('Only one device is supposed to be selected. Instead ' + selected.length + ' are selected.');
                 return null;
             }
-            return mapData.getNode(selected.nodes[0]);
+            return mapData.getNode(selected[0]);
         }
 
         function isOnlyOneEdgeSelected(event) {
@@ -1277,6 +1277,8 @@ angular.module('ptAnywhere.widget.map')
             }
             if ('onEditDevice' in $scope) {
                 editNode = function(data, callback) {
+                    // Because vis.js changes the manipulation menu after a double click or simple click in button
+                    openConsoleButton.showIfNeeded(network.getSelectedNodes());
                     $scope.onEditDevice({device: mapData.getNode(data.id)});
                     callback(data);
                 };
@@ -1325,6 +1327,50 @@ angular.module('ptAnywhere.widget.map')
             };
         }
 
+
+        /* BEGIN tweak in vis.js to add a custom button*/
+        var openConsoleButton = (function () {
+            var toAppend = null;
+            var element, onOpenConsole = null;
+
+            function init($element, onClick) {
+                element = $element;
+                onOpenConsole = onClick;
+            }
+
+            function addToDOM(selectedNodes) {
+                if (onOpenConsole !==null && selectedNodes.length === 1) {
+                    // Timeout so DOM modifications by vis.js happen before.
+                    $timeout(function() {
+                        var manipulationMenu = $('div.vis-manipulation', element);
+                        // Avoid adding if it's already added.
+                        if (manipulationMenu.has('div.vis-console').length === 0) {
+                            if (toAppend !== null) toAppend.remove();
+                            toAppend = $('<div class="vis-separator-line"></div>' +
+                                         '<div class="vis-button vis-console"><div class="vis-label">' +
+                                         res.manipulationMenu.openConsole + '</div></div>');
+                            manipulationMenu.append(toAppend);
+                            $('div.vis-console', element).click(onOpenConsole);
+                        }
+                    }, 1, false);  // Not need to call $apply, jQuery handles all modifications
+                }
+            }
+
+            function removeElement(event) {
+                if (toAppend !== null && event.nodes.length !== 1 && event.previousSelection.nodes.length === 1) {
+                    toAppend.remove();
+                    toAppend = null;
+                }
+            }
+
+            return {
+                init: init,
+                showIfNeeded: addToDOM,
+                hide: removeElement
+            };
+        })();
+        /* END tweak in vis.js */
+
         return {
             restrict: 'C',
             scope: {
@@ -1362,7 +1408,6 @@ angular.module('ptAnywhere.widget.map')
                 });
                 if ('onOpenConsole' in $scope) {
                     var onOpenConsole = function() {
-                        console.log('open console');
                         var selected = getSelectedNode();
                         if (selected !== null) {
                             $scope.onOpenConsole({endpoint: selected.consoleEndpoint});
@@ -1370,29 +1415,17 @@ angular.module('ptAnywhere.widget.map')
                     };
                     network.on('doubleClick', onOpenConsole);
 
-                    var toAppend = null;  // Shared in selectNode and deselectNode
-                    var addOpenConsoleButton = function(event) {
-                        if (event.nodes.length === 1) {
-                            // Timeout so the DOM modification by vis.js happens before.
-                            $timeout(function() {
-                                if (toAppend !== null) toAppend.remove();
-                                toAppend = $('<div class="vis-separator-line"></div>' +
-                                             '<div class="vis-button vis-console"><div class="vis-label">' +
-                                             res.manipulationMenu.openConsole + '</div></div>');
-                                $('div.vis-manipulation', $element).append(toAppend);
-                                $('div.vis-console', $element).click(onOpenConsole);
-                            }, 1);
-                        }
-                    };
-                    network.on('deselectNode', function(ev) {
-                        if (toAppend !== null && ev.nodes.length !== 1 && ev.previousSelection.nodes.length === 1) {
-                            toAppend.remove();
-                            toAppend = null;
-                        }
+                    /* BEGIN tweak in vis.js */
+                    openConsoleButton.init($element, onOpenConsole);
+                    network.on('deselectNode', openConsoleButton.hide);
+                    network.on('selectNode', function(event) {
+                        openConsoleButton.showIfNeeded(event.nodes);
                     });
-                    network.on('selectNode', addOpenConsoleButton);
-                    // Because vis.js changes the menu after double click
-                    network.on('doubleClick', addOpenConsoleButton);
+                    // Because vis.js changes the manipulation menu after a double click or simple click in button
+                    network.on('doubleClick', function(event) {
+                        openConsoleButton.showIfNeeded(event.nodes);
+                    });
+                    /* END tweak in vis.js */
                 }
             }
         };
