@@ -91,42 +91,7 @@
 }
 
 
-/*** MENUs and DIALOGs ***/
-
-p.bg-danger {
-    padding: 15px;
-}
-
-/**** Network edit menu ****/
-
-/* Custom status messages */
-div.statusMsg {
-  display: none;
-  margin-left: 40px;
-}
-
-div.vis-network div.vis-edit-mode {
-  margin: 0;
-  padding: 0;  /* Sth changes in the dev vis.js css */
-  height: 30px;
-}
-
-div.vis-network div.vis-manipulation {
-  background: none;
-  padding: 10px 0 0 10px; /* Sth changes in the dev vis.js css */
-  height: 50px;
-  border-color: #afcfd8;
-}
-
-div.vis-network div.vis-close {
-  margin: 6px 12px 0 0;
-}
-
-div.vis-network div.vis-manipulation div.vis-separator-line {
-  width: 0;
-  margin: 5px 0 0 0;
-}
-
+/*** DIALOGs ***/
 
 /**** Modification dialog ****/
 
@@ -152,6 +117,8 @@ div.vis-network div.vis-manipulation div.vis-separator-line {
 .terminal-dialog .modal-body {
     height: 90%;
 }
+
+/*** End: DIALOGs ***/
 
 
 /**** For command line directive (this could be put in an isolated CSS file) ****/
@@ -191,4 +158,188 @@ div.vis-network div.vis-manipulation div.vis-separator-line {
 
 .interactive {
     width: 100%;
+}
+
+
+
+/*** MENUs ***/
+
+p.bg-danger {
+  padding: 15px;
+}
+
+/**** Network edit menu ****/
+
+/* Custom status messages */
+div.statusMsg {
+  display: none;
+  margin-left: 40px;
+}
+
+
+/* Positioning */
+
+div.vis-network>div.vis-edit-mode, /* For some reason they put another vis-edit-mode inside the parent one */
+div.vis-network div.vis-manipulation {
+  width: 100%;
+  top: 0;  /* Edit mode too */
+  border: 0;
+  padding: 5px 0 0 10px; /* Sth changes in the dev vis.js css */
+  height: 32px;
+  background: none;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button.vis-edit.vis-edit-mode {
+    background: 0;
+    border: 0;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label {
+  padding: 4px 6px 2px 6px;
+  margin: 0;
+  height: 100%;
+}
+
+div.vis-network div.vis-manipulation div.vis-separator-line {
+  width: 0;
+  margin: 5px 0 0 0;
+}
+
+div.vis-network div.vis-close {
+  margin: 6px 6px 0 0;
+  width: 20px;
+}
+
+div.vis-network div.vis-close:hover {
+  opacity: 1;
+}
+
+
+/* Buttons colors, shapes and fonts */
+
+div.vis-network div.vis-edit-mode div.vis-button,
+div.vis-network div.vis-manipulation div.vis-button {
+  -moz-border-radius: 0;
+  border-radius: 0;
+}
+
+div.vis-network div.vis-manipulation div.vis-button:hover,
+div.vis-network div.vis-manipulation div.vis-button:active {
+  box-shadow: none;
+  -moz-border-radius: 0;
+  border-radius: 0;
+}
+
+div.vis-network div.vis-close::before,
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label::before ,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label::before {
+  font-family: "Glyphicons Halflings";
+  font-style: normal;
+  font-weight: 400;
+  font-size: 18px;
+  margin-right: 7px;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button,
+div.vis-network div.vis-manipulation div.vis-button {
+    padding: 0px;
+    height: 100%;
+    vertical-align: middle;
+}
+
+div.vis-network div.vis-close::before {
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  line-height 21px;
+  font-size 21px;
+  font-weight: 700;
+  color: #666666;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label {
+  font-family: verdana;
+  font-size: 12px;
+  color: #666666;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label:hover,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label:hover {
+  color: #000000;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label::before,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label::before {
+  color: #666666;
+}
+
+div.vis-network div.vis-close:hover::before,
+div.vis-network div.vis-edit-mode div.vis-button div.vis-label:hover::before,
+div.vis-network div.vis-manipulation div.vis-button div.vis-label:hover::before {
+  color: #2094b7;
+}
+
+/* Used for messages */
+div.vis-network div.vis-edit-mode div.vis-button.vis-none div.vis-label,
+div.vis-network div.vis-manipulation div.vis-button.vis-none div.vis-label {
+  color: #000000;
+}
+
+
+/* Replacing original icons by glyphicons */
+
+div.vis-network div.vis-close {
+   background: none;
+}
+
+div.vis-network div.vis-close::before {
+   content: "×";
+}
+
+div.vis-network div.vis-edit-mode div.vis-button.vis-edit {
+  background-image: none;
+}
+
+div.vis-network div.vis-edit-mode div.vis-button.vis-edit div.vis-label::before {
+  content: "\e065";
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-back {
+  background-image: none;
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-back div.vis-label::before {
+  content: "\e091";
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-add {
+  background-image: none;
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-add div.vis-label::before {
+  content: "\002b";
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-delete {
+  background-image: none;
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-delete div.vis-label::before {
+  content: "\2212";
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-edit {
+  background-image: none;
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-edit div.vis-label::before {
+  content: "\270f";
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-connect {
+  background-image: none;
+}
+
+div.vis-network div.vis-manipulation div.vis-button.vis-connect div.vis-label::before {
+  content: "\e144";
 }
