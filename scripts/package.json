@@ -1,13 +1,13 @@
 {
   "name": "ptAnywhere",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "User friendly interface to use PT Anywhere.",
   "homepage": "http://pt-anywhere.kmi.open.ac.uk",
   "repository": "https://github.com/PTAnywhere/ptAnywhere-widget",
   "scripts": {
-    "bump": "gulp bump --version",
-    "test": "gulp test",
+    "release": "gulp release --version",
     "build": "gulp",
+    "test": "gulp test",
     "watch": "gulp watch"
   },
   "devDependencies": {
