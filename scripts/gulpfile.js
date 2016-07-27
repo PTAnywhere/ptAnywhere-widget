@@ -45,6 +45,13 @@ gulp.task('test', function(done) {
     }).start();
 });
 
+gulp.task('bump', function () {
+    var vType = (argv.version === undefined)?  'prerelease': argv.version;
+    return gulp.src(['./bower.json', './package.json'])
+                .pipe(plugins.bump({type: vType}))
+                .pipe(gulp.dest('./'));
+});
+
 gulp.task('templateCaching', ['clean'], function() {
     var templateCache = plugins.angularTemplatecache;
     return gulp.src(TEMPLATES)
@@ -69,7 +76,7 @@ gulp.task('minimize', ['concat'], function() {
 });
 
 // Minimized file should be available in the dist folder.
-gulp.task('headers', ['minimize'], function() {
+gulp.task('headers', ['bump', 'minimize'], function() {
     var banner = ['/**',
                  ' * <%= pkg.name %> - <%= pkg.description %>',
                  ' * @version v<%= pkg.version %>',
@@ -136,15 +143,9 @@ gulp.task('extract_dependencies', ['clean'], function() {
 
 gulp.task('build', ['extract_dependencies', 'lint', 'test', 'bundle']);
 
-gulp.task('bump', function () {
-    var vType = (argv.version === undefined)?  'minor': argv.version;
-    return gulp.src(['./bower.json', './package.json'])
-                .pipe(plugins.bump({type: vType}))
-                .pipe(gulp.dest('./'));
-});
-
 // Task which will be called on(called when you run `gulp`)
 gulp.task('release', ['bump'], function() {
+    var vType = (argv.version === undefined)?  'minor': argv.version;
     return gulp.src(DIST + '**')
                 .pipe(gulp.dest(RELEASE_DIR));
 });
