@@ -2,19 +2,27 @@
 
 This project contains an Angular JS application to create a GUI for PTAnywhere.
 
+## Usage
 
-## Build it
+This project uses Bower.
+Simply add the following dependency:
 
- 1. Install node and npm
- 1. ``npm install``
- 1. ``bower install`` (or update if it has already been installed)
- 1. ``gulp``
-
+```js
+{
+  ...
+  "dependencies": {
+    ...
+    "pt-anywhere": "git://github.com/PTAnywhere/ptAnywhere-widget.git",
+    ...
+  }
+  ...
+}
+```
 
 ## Configuration
 
 Simply set one of these variables as constants:
-```javascript
+```js
 angular.module('ptAnywhere.locale').constant('use', 'locale_en');
 angular.module('ptAnywhere.api').constant('url', 'http://ptanywhere.kmi.open.ac.uk/api/v1');
 
@@ -33,15 +41,38 @@ First, load the locale file:
 
 Then, make sure that you set the locale that you added.
 
-```javascript
+```js
 angular.module('ptAnywhere.locale').constant('use', 'locale_es');
 ```
 
 To create your locale file, I recommend you to copy and edit _locale/en.js_.
 
-## Run tests
+## Developers
+
+### Install
+
+Install via npm:
+
+    $ npm install
+
+Install via bower:
+
+    $ bower install  # Or bower update
+
+### Run tests
 
 Use one of the following alternatives:
 
- * ``npm test``
- * ``gulp test``
+    $ npm test
+    $ gulp test
+
+### Bump version
+
+__Version-type__ can be "major", "minor", "patch" or "prerelease".
+ 
+    $ npm run bump [version-type]
+
+(Do not forget to tag the version after committing it)
+
+    $ git tag "v0.0.1"
+    $ git push origin --tags

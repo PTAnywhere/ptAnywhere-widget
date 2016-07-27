@@ -5,20 +5,24 @@ var gulpLoadPlugins = require('gulp-load-plugins');
 var plugins = gulpLoadPlugins();
 var del = require('del');  // Manually added because it does not follow "gulp-*" pattern
 var Server = require('karma').Server;
+var argv = require('yargs').argv;
 
 
-var SRC               = '../app/';
-var SRC_JS            = SRC + '**/*.js';
-var SRC_SASS          = SRC + '**/*.sass';
-var TEMPLATES         = '../app/templates/*.html';
-var TMP               = 'tmp/';
-var TEMPLATE_JS       = 'templates.js';
-var DIST              = '../dist/';
-var PTANYWHERE_JS     = 'ptAnywhere.js';
-var PTANYWHERE_MIN_JS = 'ptAnywhere.min.js';
+var SRC                = '../app/';
+var SRC_JS             = SRC + '**/*.js';
+var SRC_SASS           = SRC + '**/*.sass';
+var TEMPLATES          = '../app/templates/*.html';
+var TMP                = 'tmp/';
+var TEMPLATE_JS        = 'templates.js';
+var DIST               = TMP + 'dist/';
+var RELEASE_DIR        = '../dist/';
+var PTANYWHERE_JS      = 'ptAnywhere.js';
+var PTANYWHERE_MIN_JS  = 'ptAnywhere.min.js';
 var PTANYWHERE_CSS     = 'ptAnywhere.css';
-var PTANYWHERE_MIN_CSS     = 'ptAnywhere.min.css';
+var PTANYWHERE_MIN_CSS = 'ptAnywhere.min.css';
 
+
+var pkg = require('./package.json');
 
 
 gulp.task('clean', function(done) {
@@ -66,7 +70,6 @@ gulp.task('minimize', ['concat'], function() {
 
 // Minimized file should be available in the dist folder.
 gulp.task('headers', ['minimize'], function() {
-    var pkg = require('./package.json');
     var banner = ['/**',
                  ' * <%= pkg.name %> - <%= pkg.description %>',
                  ' * @version v<%= pkg.version %>',
@@ -131,14 +134,23 @@ gulp.task('extract_dependencies', ['clean'], function() {
         .pipe(gulp.dest(TMP + 'vendors'));
 });
 
-// The watch task (to automatically rebuild when the source code changes)
-gulp.task('watch', function() {
-    gulp.watch(SRC_JS, ['lint', 'test', 'bundle']);
-    gulp.watch(SRC_SASS, ['sass']);
+gulp.task('build', ['extract_dependencies', 'lint', 'test', 'bundle']);
+
+gulp.task('bump', function () {
+    var vType = (argv.version === undefined)?  'minor': argv.version;
+    return gulp.src(['./bower.json', './package.json'])
+                .pipe(plugins.bump({type: vType}))
+                .pipe(gulp.dest('./'));
 });
 
-// The default task (called when you run `gulp`)
-gulp.task('default', ['extract_dependencies', 'lint', 'test', 'bundle']);
+// Task which will be called on(called when you run `gulp`)
+gulp.task('release', ['bump'], function() {
+    return gulp.src(DIST + '**')
+                .pipe(gulp.dest(RELEASE_DIR));
+});
 
 // Default + watch
-gulp.task('run', ['default', 'watch']);
+gulp.task('run', ['build', 'watch']);
+
+// The default task (called when you run `gulp`)
+gulp.task('default', ['build']);
