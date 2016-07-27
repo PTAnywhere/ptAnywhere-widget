@@ -5,7 +5,6 @@ var gulpLoadPlugins = require('gulp-load-plugins');
 var plugins = gulpLoadPlugins();
 var del = require('del');  // Manually added because it does not follow "gulp-*" pattern
 var Server = require('karma').Server;
-var argv = require('yargs').argv;
 
 
 var SRC                = '../app/';
@@ -27,6 +26,31 @@ gulp.task('clean', function(done) {
     return del([TMP + '**'], done);
 });
 
+// Vendor files will be moved by maven to the "target" directory to be bundled in the .war.
+gulp.task('extract_dependencies', ['clean'], function() {
+    var d = 'bower_components/'
+    var dependencies = [d + 'angular/angular.min.js',
+                        d + 'angular-route/angular-route.min.js',
+                        d + 'angular-animate/angular-animate.min.js',
+                        d + 'angular-bootstrap/ui-bootstrap-tpls.min.js',
+                        d + 'angular-websocket/angular-websocket.min.js',
+                        d + 'angular-scroll-glue/src/scrollglue.js',
+                        // Bootstrap JS code is not needed as it is already included in the "Angular UI bootstrap"
+                        // module included above.
+                        // Bootstrap CSS files still needed
+                        d + 'bootstrap/dist/css/bootstrap.min.css',
+                        d + 'bootstrap/dist/css/bootstrap-theme.min.css',
+                        d + 'jquery/dist/jquery.min.js',
+                        d + 'jquery-ui/ui/minified/core.min.js',
+                        d + 'jquery-ui/ui/minified/widget.min.js',
+                        d + 'jquery-ui/ui/minified/mouse.min.js',
+                        d + 'jquery-ui/ui/minified/draggable.min.js',
+                        d + 'jquery-ui-touch-punch/jquery.ui.touch-punch.min.js',
+                        d + 'vis/dist/**']
+    return gulp.src(dependencies)
+                .pipe(gulp.dest(TMP + 'vendors'));
+});
+
 gulp.task('lint', function() {
     var jshint = plugins.jshint;
     return gulp.src(SRC_JS)
@@ -43,11 +67,20 @@ gulp.task('test', function(done) {
     }).start();
 });
 
-gulp.task('bump', function () {
-    var vType = (argv.version === undefined)?  'prerelease': argv.version;
+function bumpIt(versionType) {
     return gulp.src(['./bower.json', './package.json'])
-                .pipe(plugins.bump({type: vType}))
+                .pipe(plugins.bump({type: versionType}))
                 .pipe(gulp.dest('./'));
+}
+
+gulp.task('bump', function (cb) {
+    bumpIt('prerelease').on('end', cb);
+});
+
+gulp.task('bump_parametrized', function (cb) {
+    var argv = require('yargs').argv;
+    var vType = (argv.version === undefined)? 'minor': argv.version;
+    bumpIt(vType).on('end', cb);
 });
 
 gulp.task('templateCaching', ['clean'], function() {
@@ -74,7 +107,7 @@ gulp.task('minimize', ['concat'], function() {
 });
 
 // Minimized file should be available in the dist folder.
-gulp.task('headers', ['bump', 'minimize'], function() {
+gulp.task('headers', ['minimize'], function() {
     var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
     var banner = ['/**',
                  ' * <%= pkg.name %> - <%= pkg.description %>',
@@ -115,42 +148,20 @@ gulp.task('bundle-css', ['minify-css']);
 // Other tasks that we might add in the future: 'bundle-js-individual', 'bundle-css', 'copy'
 gulp.task('bundle', ['bundle-css', 'concat', 'minimize', 'headers']);
 
-// Vendor files will be moved by maven to the "target" directory to be bundled in the .war.
-gulp.task('extract_dependencies', ['clean'], function() {
-    var d = 'bower_components/'
-    var dependencies = [d + 'angular/angular.min.js',
-                        d + 'angular-route/angular-route.min.js',
-                        d + 'angular-animate/angular-animate.min.js',
-                        d + 'angular-bootstrap/ui-bootstrap-tpls.min.js',
-                        d + 'angular-websocket/angular-websocket.min.js',
-                        d + 'angular-scroll-glue/src/scrollglue.js',
-                        // Bootstrap JS code is not needed as it is already included in the "Angular UI bootstrap"
-                        // module included above.
-                        // Bootstrap CSS files still needed
-                        d + 'bootstrap/dist/css/bootstrap.min.css',
-                        d + 'bootstrap/dist/css/bootstrap-theme.min.css',
-                        d + 'jquery/dist/jquery.min.js',
-                        d + 'jquery-ui/ui/minified/core.min.js',
-                        d + 'jquery-ui/ui/minified/widget.min.js',
-                        d + 'jquery-ui/ui/minified/mouse.min.js',
-                        d + 'jquery-ui/ui/minified/draggable.min.js',
-                        d + 'jquery-ui-touch-punch/jquery.ui.touch-punch.min.js',
-                        d + 'vis/dist/**']
-    gulp.src(dependencies)
-        .pipe(gulp.dest(TMP + 'vendors'));
-});
-
 gulp.task('build', ['extract_dependencies', 'lint', 'test', 'bundle']);
 
+// To automatically rebuild when the source code changes
+gulp.task('watch', function() {
+    gulp.watch(SRC_JS, ['lint', 'test']);
+    gulp.watch(SRC_SASS, ['sass']);
+});
+
 // Task which will be called on(called when you run `gulp`)
-gulp.task('release', ['build'], function() {
+gulp.task('release', ['bump_parametrized', 'build'], function() {
     var vType = (argv.version === undefined)?  'minor': argv.version;
     return gulp.src(DIST + '**')
                 .pipe(gulp.dest(RELEASE_DIR));
 });
 
-// Default + watch
-gulp.task('run', ['build', 'watch']);
-
 // The default task (called when you run `gulp`)
-gulp.task('default', ['build']);
+gulp.task('default', ['bump', 'build']);
