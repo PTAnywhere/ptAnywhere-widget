@@ -70,7 +70,7 @@ Use one of the following alternatives:
 
 __Version-type__ can be "major", "minor", "patch" or "prerelease".
  
-    $ npm run bump [version-type]
+    $ npm run release [version-type]
 
 (Do not forget to tag the version after committing it)
 

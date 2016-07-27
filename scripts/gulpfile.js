@@ -22,8 +22,6 @@ var PTANYWHERE_CSS     = 'ptAnywhere.css';
 var PTANYWHERE_MIN_CSS = 'ptAnywhere.min.css';
 
 
-var pkg = require('./package.json');
-
 
 gulp.task('clean', function(done) {
     return del([TMP + '**'], done);
@@ -77,6 +75,7 @@ gulp.task('minimize', ['concat'], function() {
 
 // Minimized file should be available in the dist folder.
 gulp.task('headers', ['bump', 'minimize'], function() {
+    var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
     var banner = ['/**',
                  ' * <%= pkg.name %> - <%= pkg.description %>',
                  ' * @version v<%= pkg.version %>',
@@ -144,7 +143,7 @@ gulp.task('extract_dependencies', ['clean'], function() {
 gulp.task('build', ['extract_dependencies', 'lint', 'test', 'bundle']);
 
 // Task which will be called on(called when you run `gulp`)
-gulp.task('release', ['bump'], function() {
+gulp.task('release', ['build'], function() {
     var vType = (argv.version === undefined)?  'minor': argv.version;
     return gulp.src(DIST + '**')
                 .pipe(gulp.dest(RELEASE_DIR));
