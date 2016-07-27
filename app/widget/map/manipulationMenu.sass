@@ -1,0 +1,154 @@
+/* vis.js manipulation menu
+
+/** Tweak to show errors *
+p.bg-danger
+  padding: 15px
+
+div.statusMsg
+  display: none
+  margin-left: 40px
+
+/** Customization of the manipulation menu *
+
+%vis-menu
+  width: 100%
+  top: 0
+  border: 0
+  padding: 5px 0 0 10px
+  height: 32px
+  background: none
+
+div.vis-network
+  // For some reason they put another vis-edit-mode inside the parent one
+  > div.vis-edit-mode
+    @extend %vis-menu
+
+  div
+    &.vis-manipulation
+      @extend %vis-menu
+
+    &.vis-edit-mode div.vis-button
+      &.vis-edit.vis-edit-mode
+        background: 0
+        border: 0
+
+      div.vis-label
+        padding: 4px 6px 2px 6px
+        margin: 0
+        height: 100%
+
+    &.vis-manipulation div
+      &.vis-button div.vis-label
+        padding: 4px 6px 2px 6px
+        margin: 0
+        height: 100%
+
+      &.vis-separator-line
+        width: 0
+        margin: 5px 0 0 0
+
+    &.vis-close
+      margin: 6px 6px 0 0
+      width: 20px
+
+      &:hover
+        opacity: 1
+
+    // Buttons colors, shapes and fonts
+    &.vis-edit-mode div.vis-button
+      -moz-border-radius: 0
+      border-radius: 0
+
+    &.vis-manipulation div.vis-button
+      -moz-border-radius: 0
+      border-radius: 0
+
+      &:hover, &:active
+        box-shadow: none
+        -moz-border-radius: 0
+        border-radius: 0
+
+    &.vis-close::before, &.vis-edit-mode div.vis-button div.vis-label::before, &.vis-manipulation div.vis-button div.vis-label::before
+      font-family: "Glyphicons Halflings"
+      font-style: normal
+      font-weight: 400
+      font-size: 18px
+      margin-right: 7px
+
+    &.vis-edit-mode div.vis-button, &.vis-manipulation div.vis-button
+      padding: 0px
+      height: 100%
+      vertical-align: middle
+
+    &.vis-close::before
+      font-family: "Helvetica Neue",Helvetica,Arial,sans-serif
+      line-height: 21px
+      font-size: 21px
+      font-weight: 700
+      color: #666666
+
+    &.vis-edit-mode div.vis-button div.vis-label, &.vis-manipulation div.vis-button div.vis-label
+      font-family: verdana
+      font-size: 12px
+      color: #666666
+
+    &.vis-edit-mode div.vis-button div.vis-label:hover, &.vis-manipulation div.vis-button div.vis-label:hover
+      color: #000000
+
+    &.vis-edit-mode div.vis-button div.vis-label::before, &.vis-manipulation div.vis-button div.vis-label::before
+      color: #666666
+
+    &.vis-close:hover::before, &.vis-edit-mode div.vis-button div.vis-label:hover::before, &.vis-manipulation div.vis-button div.vis-label:hover::before
+      color: #2094b7
+
+    // Used for messages
+    &.vis-edit-mode div.vis-button.vis-none div.vis-label, &.vis-manipulation div.vis-button.vis-none div.vis-label
+      color: #000000
+
+    // Replacing original icons by glyphicons
+    &.vis-close
+      background: none
+
+      &::before
+        content: "×"
+
+    &.vis-edit-mode div.vis-button.vis-edit
+      background-image: none
+
+      div.vis-label::before
+        content: "\e065"
+
+    &.vis-manipulation div.vis-button
+      &.vis-back
+        background-image: none
+
+        div.vis-label::before
+          content: "\e091"
+
+      &.vis-add
+        background-image: none
+
+        div.vis-label::before
+          content: "\002b"
+
+      &.vis-delete
+        background-image: none
+
+        div.vis-label::before
+          content: "\2212"
+
+      &.vis-edit
+        background-image: none
+
+        div.vis-label::before
+          content: "\270f"
+
+      &.vis-connect
+        background-image: none
+
+        div.vis-label::before
+          content: "\e144"
+
+      // Custom button for command line (console)
+      &.vis-console div.vis-label::before
+        content: "\e254"

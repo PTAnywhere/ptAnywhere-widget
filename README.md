@@ -38,3 +38,10 @@ angular.module('ptAnywhere.locale').constant('use', 'locale_es');
 ```
 
 To create your locale file, I recommend you to copy and edit _locale/en.js_.
+
+## Run tests
+
+Use one of the following alternatives:
+
+ * ``npm test``
+ * ``gulp test``

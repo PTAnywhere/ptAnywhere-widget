@@ -1,6 +1,6 @@
 {
   "name": "ptanywhere-widget",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "homepage": "https://github.com/PTAnywhere/ptAnywhere-widget",
   "authors": [
     "Aitor Gómez Goiri <aitor.gomez-goiri@open.ac.uk>"
@@ -8,7 +8,7 @@
   "description": "Javascript application with the GUI widgets for PTAnywhere.",
   "main": [
     "../dist/ptAnywhere.js",
-    "../dist/css/ptAnywhere.css"
+    "../dist/ptAnywhere.css"
   ],
   "repository": {
     "type": "git",
