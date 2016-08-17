@@ -1,16 +1,16 @@
 var fs = require('fs');
+var del = require('del');  // Manually added because it does not follow "gulp-*" pattern
+var Server = require('karma').Server;
 var gulp = require('gulp');
 /* Read dependencies from package.json and inject them: */
 var gulpLoadPlugins = require('gulp-load-plugins');
 var plugins = gulpLoadPlugins();
-var del = require('del');  // Manually added because it does not follow "gulp-*" pattern
-var Server = require('karma').Server;
 
 
 var SRC                = '../app/';
 var SRC_JS             = SRC + '**/*.js';
 var SRC_SASS           = SRC + '**/*.sass';
-var TEMPLATES          = '../app/templates/*.html';
+var TEMPLATES          = SRC + 'templates/*.html';
 var TMP                = 'tmp/';
 var TEMPLATE_JS        = 'templates.js';
 var DIST               = TMP + 'dist/';
@@ -37,9 +37,9 @@ gulp.task('extract_dependencies', ['clean'], function() {
                         d + 'angular-scroll-glue/src/scrollglue.js',
                         // Bootstrap JS code is not needed as it is already included in the "Angular UI bootstrap"
                         // module included above.
-                        // Bootstrap CSS files still needed
-                        d + 'bootstrap/dist/css/bootstrap.min.css',
-                        d + 'bootstrap/dist/css/bootstrap-theme.min.css',
+                        // Bootstrap CSS files still needed but are added from CDN.
+                        //d + 'bootstrap/dist/css/bootstrap.min.css',
+                        //d + 'bootstrap/dist/css/bootstrap-theme.min.css',
                         d + 'jquery/dist/jquery.min.js',
                         d + 'jquery-ui/ui/minified/core.min.js',
                         d + 'jquery-ui/ui/minified/widget.min.js',
@@ -73,11 +73,11 @@ function bumpIt(versionType) {
                 .pipe(gulp.dest('./'));
 }
 
-gulp.task('bump', function (cb) {
+gulp.task('bump', function(cb) {
     bumpIt('prerelease').on('end', cb);
 });
 
-gulp.task('bump_parametrized', function (cb) {
+gulp.task('bump_parametrized', function(cb) {
     var argv = require('yargs').argv;
     var vType = (argv.version === undefined)? 'minor': argv.version;
     bumpIt(vType).on('end', cb);
@@ -150,15 +150,13 @@ gulp.task('bundle', ['bundle-css', 'concat', 'minimize', 'headers']);
 
 gulp.task('build', ['extract_dependencies', 'lint', 'test', 'bundle']);
 
-// To automatically rebuild when the source code changes
+// To automatically recheck when the source code changes
 gulp.task('watch', function() {
     gulp.watch(SRC_JS, ['lint', 'test']);
     gulp.watch(SRC_SASS, ['sass']);
 });
 
-// Task which will be called on(called when you run `gulp`)
 gulp.task('release', ['bump_parametrized', 'build'], function() {
-    var vType = (argv.version === undefined)?  'minor': argv.version;
     return gulp.src(DIST + '**')
                 .pipe(gulp.dest(RELEASE_DIR));
 });
