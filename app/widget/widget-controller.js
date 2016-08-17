@@ -1,9 +1,11 @@
 angular.module('ptAnywhere.widget')
-    .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal',
+    .controller('WidgetController', ['$q', '$log', '$location', '$routeParams', '$uibModal', 'locale',
                                      'NetworkMapData', 'HttpApiService',
-                                     function($q, $log, $location, $routeParams, $uibModal, mapData, api) {
+                                     function($q, $log, $location, $routeParams, $uibModal, locale, mapData, api) {
         var self = this;
         var modalInstance;
+
+        self.creationTooltip = locale.creationMenu.legend;
 
         if (!mapData.isLoaded()) {
             $location.path('/loading/' + $routeParams.id);
